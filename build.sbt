@@ -4,7 +4,7 @@ version := "0.0.1-SNAPSHOT"
 
 organization := "de.sciss"
 
-scalaVersion := "2.10.1"
+scalaVersion := "2.10.2"
 
 description := "Automatic GUI from case classes for rapid prototyping"
 
@@ -17,11 +17,16 @@ initialCommands in console :=
     |import scala.swing._
     |import de.sciss.guiflitz._""".stripMargin
 
-resolvers += "rillit-repository" at "http://akisaarinen.github.com/rillit/maven"
+// resolvers += "rillit-repository" at "http://akisaarinen.github.com/rillit/maven"
+
+libraryDependencies <+= scalaVersion { sv =>
+  "org.scala-lang" % "scala-reflect" % sv
+}
 
 libraryDependencies ++= Seq(
   "de.sciss"       %% "swingplus"        % "0.0.+",
-  "fi.akisaarinen" %% "rillit-nodynamic" % "0.2.0"  // not sure I want 1.3 MB shapeless :-/
+  "de.sciss"       %% "model"            % "0.3.+"
+  // "fi.akisaarinen" %% "rillit-nodynamic" % "0.2.0"  // not sure I want 1.3 MB shapeless :-/
 )
 
 retrieveManaged := true
