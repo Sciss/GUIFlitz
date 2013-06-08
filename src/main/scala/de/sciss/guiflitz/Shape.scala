@@ -29,7 +29,7 @@ object Shape {
     shapeFromType(typeOf[A])
   }
 
-  private def getApplyMethod(sym: Symbol): (ru.InstanceMirror, Type, ru.MethodSymbol) = {
+  private[guiflitz] def getApplyMethod(sym: Symbol): (ru.InstanceMirror, Type, ru.MethodSymbol) = {
     val clazz  = sym.asClass
     val mod    = clazz.companionSymbol.asModule
     val im     = cm.reflect(cm.reflectModule(mod).instance)

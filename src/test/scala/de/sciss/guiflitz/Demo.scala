@@ -9,10 +9,10 @@ object Demo extends SimpleSwingApplication {
     title     = "GUIFlitz"
     val view  = AutoView(Person.Example)
     contents  = new BorderPanel {
+      add(view.component, BorderPanel.Position.Center)
       add(Button("Post") {
         println(view.cell())
-      }, BorderPanel.Position.North)
-      add(view.component, BorderPanel.Position.Center)
+      }, BorderPanel.Position.South)
     }
     me.defaultCloseOperation = CloseOperation.Exit
     pack().centerOnScreen()

@@ -67,17 +67,41 @@ private[guiflitz] object AutoViewImpl {
       border  = Swing.TitledBorder(Swing.EtchedBorder, tpe.typeSymbol.name.toString)
     }
 
+    def invokeGetter(idx: Int): Any = {
+      val mGetter     = tpe.member(ru.newTermName(s"copy$$default$$${idx+1}")).asMethod
+      val im          = cm.reflect(cell())
+      val mm          = im.reflectMethod(mGetter)
+      mm()
+    }
+
+    def copy(idx: Int, value: Any): Product = {
+      val v               = (0 until args.size).map(j => if (j == idx) value else invokeGetter(j))
+      val (m, _, mApply)  = Shape.getApplyMethod(tpe.typeSymbol)
+      m.reflectMethod(mApply)(v: _*).asInstanceOf[Product]
+    }
+
     args.zipWithIndex.foreach { case (arg, idx) =>
-      val lb      = new Label(s"${arg.name}:", null, Alignment.Trailing)
-      // val at      = arg.shape.tpe
-      val mGetter = tpe.member(ru.newTermName(s"copy$$default$$${idx+1}")).asMethod
-      // val im      = cm.reflectClass(tpe) // .typeSymbol.asClass)
-      val im      = cm.reflect(cell())
-      val mm      = im.reflectMethod(mGetter)
-      val ai      = mm()
-      val av  = mkView(ai, arg.shape)
-      comp.contents += lb
-      comp.contents += av.component
+      val lb = new Label(s"${arg.name}:", null, Alignment.Trailing)
+      val av = mkView(invokeGetter(idx), arg.shape).asInstanceOf[AutoView[Any]]
+
+      lazy val l2: Cell.Listener[Any] = {
+        case value =>
+          cell.removeListener(l1)
+          cell() = copy(idx, value)
+          cell.addListener(l1)
+      }
+      av.cell.addListener(l2)
+
+      lazy val l1: Cell.Listener[Product] = {
+        case value =>
+          av.cell.removeListener(l2)
+          av.cell() = invokeGetter(idx)
+          av.cell.addListener(l2)
+      }
+      cell.addListener(l1)
+
+      comp.contents  += lb
+      comp.contents  += av.component
     }
     new Impl(cell, comp)
   }
