@@ -3,7 +3,7 @@ package impl
 
 import reflect.runtime.{universe => ru, currentMirror => cm}
 import ru.{Type, TypeTag}
-import javax.swing.SpinnerNumberModel
+import javax.swing.{Spring, SpinnerNumberModel}
 import de.sciss.swingplus.Spinner
 import scala.swing._
 import scala.swing.event.ValueChanged
@@ -62,10 +62,40 @@ private[guiflitz] object AutoViewImpl {
   }
 
   private def mkProduct(init: Product, tpe: Type, args: Vec[Shape.Arg]): AutoView[Product] = {
-    val cell  = Cell(init)
-    val comp  = new GridPanel(args.size, 2) {
-      border  = Swing.TitledBorder(Swing.EtchedBorder, tpe.typeSymbol.name.toString)
+    val cell    = Cell(init)
+    val comp    = new SpringPanel
+    comp.border = Swing.TitledBorder(Swing.EtchedBorder, tpe.typeSymbol.name.toString)
+    import comp.cons
+
+    import Springs._
+
+    class MaxWidthSpring(col: Int) extends Spring {
+      private def reduce(op: Spring => Int): Int = {
+        comp.contents.zipWithIndex.foldLeft(0) { case (res, (c, idx)) =>
+          if (idx % 2 == col) math.max(res, op(Spring.width(c.peer))) else res
+        }
+      }
+
+      private var _value = Spring.UNSET
+
+      def getMinimumValue  : Int = reduce(_.minValue      )
+      def getPreferredValue: Int = reduce(_.preferredValue)
+      def getMaximumValue  : Int = reduce(_.maxValue      )
+      def getValue         : Int = if (_value == Spring.UNSET) reduce(_.value) else _value
+
+      def setValue(value: Int) {
+        if (_value != value) {
+          _value = value
+          comp.contents.foreach(c => cons(c).width.value = value)
+        }
+      }
     }
+
+    // dynamic max spring
+    val lbLeftSpring  = 4: Spring
+    val lbWidthSpring = new MaxWidthSpring(0)
+    val ggLeftSpring  = lbLeftSpring + lbWidthSpring + 4
+    val ggWidthSpring = new MaxWidthSpring(1)
 
     def invokeGetter(idx: Int): Any = {
       val mGetter     = tpe.member(ru.newTermName(s"copy$$default$$${idx+1}")).asMethod
@@ -80,8 +110,10 @@ private[guiflitz] object AutoViewImpl {
       m.reflectMethod(mApply)(v: _*).asInstanceOf[Product]
     }
 
+    var bottomSpring = 0: Spring
+
     args.zipWithIndex.foreach { case (arg, idx) =>
-      val lb = new Label(s"${arg.name}:", null, Alignment.Trailing)
+      val lb = new Label(s"${arg.name.capitalize}:", null, Alignment.Trailing)
       val av = mkView(invokeGetter(idx), arg.shape).asInstanceOf[AutoView[Any]]
 
       lazy val l2: Cell.Listener[Any] = {
@@ -100,9 +132,26 @@ private[guiflitz] object AutoViewImpl {
       }
       cell.addListener(l1)
 
+      val gg = av.component
       comp.contents  += lb
-      comp.contents  += av.component
+      comp.contents  += gg
+      val clb         = cons(lb)
+      val cgg         = cons(gg)
+      clb.left        = lbLeftSpring
+      val topSpring   = bottomSpring + 4
+      clb.top         = topSpring
+      clb.width       = lbWidthSpring
+      cgg.left        = ggLeftSpring
+      cgg.top         = topSpring
+      clb.baseline    = cgg.baseline
+
+      bottomSpring    = clb.bottom max cgg.bottom
     }
+
+    val ccomp = cons(comp)
+    ccomp.right   = ggLeftSpring + ggWidthSpring + Spring.constant(4, 4, Int.MaxValue)
+    ccomp.bottom  = bottomSpring + Spring.constant(4, 4, Int.MaxValue)
+
     new Impl(cell, comp)
   }
 

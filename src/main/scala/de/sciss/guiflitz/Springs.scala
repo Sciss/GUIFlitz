@@ -14,6 +14,12 @@ object Springs {
     def max(that: Spring) : Spring = mx(s, that)
     def unary_- : Spring           = minus(s)
     def *  (factor: Float): Spring = scale(s, factor)
+
+    def value: Int = s.getValue
+    def value_=(i: Int) { s.setValue(i) }
+    def minValue: Int = s.getMinimumValue
+    def maxValue: Int = s.getMaximumValue
+    def preferredValue: Int = s.getPreferredValue
   }
 
   implicit final class RichConstraints(val c: SpringLayout.Constraints) extends AnyVal {

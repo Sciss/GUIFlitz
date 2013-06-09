@@ -144,4 +144,6 @@ class SpringPanel extends Panel with SequentialContainer.Wrapper { me =>
     linkWidth (xs: _*)
     linkHeight(xs: _*)
   }
+
+
 }
