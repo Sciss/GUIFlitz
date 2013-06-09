@@ -83,6 +83,8 @@ private[guiflitz] object AutoViewImpl {
             cell.addListener(l)
           }
       }
+      l(init)
+      cell.addListener(l)
     }
     new Impl(cell, comp)
   }

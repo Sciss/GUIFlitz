@@ -1,14 +1,14 @@
 package de.sciss.guiflitz
 
-object Gender {
+// object Gender {
   case object Male   extends Gender
   case object Female extends Gender
   case object Other  extends Gender
-}
+// }
 sealed trait Gender
 
 object Person {
-  val Example = Person(name = "Nam June", age = 80, flux = true, num = 3.1415, gender = Gender.Male)
+  val Example = Person(name = "Nam June", age = 80, flux = true, num = 3.1415, gender = /* Gender.*/ Male)
 }
 case class Person(name: String, age: Int, flux: Boolean, num: Double, gender: Gender)
 

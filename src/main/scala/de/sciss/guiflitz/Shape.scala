@@ -50,7 +50,8 @@ object Shape {
       val clazz = tpe.typeSymbol.asClass
       if (clazz.isModuleClass) {
         // cf. https://gist.github.com/xeno-by/4985929
-        val mod = clazz.companionSymbol.asModule
+        val mc  = clazz.companionSymbol
+        val mod = mc.asModule
         val mm  = cm.reflectModule(mod)
         mm.instance
       } else {
