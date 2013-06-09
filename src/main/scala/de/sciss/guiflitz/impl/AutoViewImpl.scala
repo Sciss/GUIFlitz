@@ -19,25 +19,33 @@ private[guiflitz] object AutoViewImpl {
 
   private def mkView(init: Any, shape: Shape): AutoView[_] =
     (init, shape) match {
-      case (i: Int    , Shape.Int               )  => mkIntSpinner(i)
+      case (i: Int    , Shape.Int               )  =>
+        mkSpinner[Int](new SpinnerNumberModel(i, Int.MinValue, Int.MaxValue, 1))(_.intValue())
+      case (d: Double , Shape.Double            )  =>
+        mkSpinner[Double](new SpinnerNumberModel(d, Double.MinValue, Double.MaxValue, 1))(_.doubleValue())
       case (s: String , Shape.String            )  => mkTextField(s)
       case (p: Product, Shape.Product(tpe, args))  => mkProduct(p, tpe, args)
       case _                          => throw new IllegalArgumentException(s"Shape $shape has no supported view")
     }
 
-  private def mkIntSpinner(init: Int): AutoView[Int] = {
-    val cell  = Cell(init)
-    val m     = new SpinnerNumberModel(init, Int.MinValue, Int.MaxValue, 1)
-    val l: Cell.Listener[Int] = {
+  private def mkSpinner[A](m: SpinnerNumberModel)(fun: Number => A): AutoView[A] = {
+    val cell  = Cell(fun(m.getNumber))
+    // val m     = new SpinnerNumberModel(init, Double.PositiveInfinity, Double.NegativeInfinity, 1)
+    val l: Cell.Listener[A] = {
       case value => m.setValue(value)
     }
     cell.addListener(l)
     val comp  = new Spinner(m) {
+      preferredSize = {
+        val d   = preferredSize
+        d.width = 128
+        d
+      }
       listenTo(this)
       reactions += {
         case ValueChanged(_) =>
           cell.removeListener(l)
-          cell() = m.getNumber.intValue()
+          cell() = fun(m.getNumber)
           cell.addListener(l)
       }
     }
@@ -46,7 +54,7 @@ private[guiflitz] object AutoViewImpl {
 
   private def mkTextField(init: String): AutoView[String] = {
     val cell  = Cell(init)
-    val comp  = new TextField(init, 16) {
+    val comp  = new TextField(init, 10) {
       val l: Cell.Listener[String] = {
         case value => text = value
       }
@@ -70,23 +78,23 @@ private[guiflitz] object AutoViewImpl {
     import Springs._
 
     class MaxWidthSpring(col: Int) extends Spring {
-      private def reduce(op: Spring => Int): Int = {
+      private def reduce(op: Component => Int): Int = {
         comp.contents.zipWithIndex.foldLeft(0) { case (res, (c, idx)) =>
-          if (idx % 2 == col) math.max(res, op(Spring.width(c.peer))) else res
+          if (idx % 2 == col) math.max(res, op(c)) else res
         }
       }
 
       private var _value = Spring.UNSET
 
-      def getMinimumValue  : Int = reduce(_.minValue      )
-      def getPreferredValue: Int = reduce(_.preferredValue)
-      def getMaximumValue  : Int = reduce(_.maxValue      )
-      def getValue         : Int = if (_value == Spring.UNSET) reduce(_.value) else _value
+      def getMinimumValue  : Int = reduce(_.minimumSize  .width)
+      def getPreferredValue: Int = reduce(_.preferredSize.width)
+      def getMaximumValue  : Int = reduce(_.maximumSize  .width)
+      def getValue         : Int = _value // if (_value == Spring.UNSET) reduce(_.value) else _value
 
       def setValue(value: Int) {
         if (_value != value) {
           _value = value
-          comp.contents.foreach(c => cons(c).width.value = value)
+          // comp.contents.foreach(c => cons(c).width.value = value)
         }
       }
     }
