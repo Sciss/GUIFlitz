@@ -9,21 +9,55 @@ import scala.util.control.NonFatal
 object Shape {
   case object Int extends Shape {
     val tpe = typeOf[Int]
+    def instantiate() = 0
   }
   case object Double extends Shape {
     val tpe = typeOf[Double]
+    def instantiate() = 0.0
   }
   case object String extends Shape {
     val tpe = typeOf[String]
+    def instantiate() = "string"
   }
   case object Boolean extends Shape {
     val tpe = typeOf[Boolean]
+    def instantiate() = false
   }
-  case class Vector (tpe: Type, elem: Shape)     extends Shape
-  case class Product(tpe: Type, args: Vec[Arg])  extends Shape
+  case class Vector (tpe: Type, elem: Shape)     extends Shape {
+    def instantiate() = Vec.empty
+  }
+  case class Product(tpe: Type, args: Vec[Arg])  extends Shape {
+    def instantiate(): Any = {
+      val clazz           = tpe.typeSymbol.asClass
+      val (im, _, mApply) = getApplyMethod(clazz)
+      val vargs = args.map { arg => arg.default.getOrElse(arg.shape.instantiate()) }
+      im.reflectMethod(mApply)(vargs: _*)
+    }
+  }
   // case class Module (tpe: Type)                  extends Shape
-  case class Variant(tpe: Type, sub: Vec[Shape]) extends Shape
-  case class Other  (tpe: Type)                  extends Shape
+
+  case class Variant(tpe: Type, sub: Vec[Shape]) extends Shape {
+    def find(obj: Any): Option[Shape] = {
+      val objType = cm.classSymbol(obj.getClass).toType
+      require  (objType <:< this.tpe)
+      sub find (objType <:< _   .tpe)
+    }
+
+    def instantiate() = sub.head.instantiate()
+  }
+  case class Other  (tpe: Type)                  extends Shape {
+    def instantiate(): Any = {
+      val clazz = tpe.typeSymbol.asClass
+      if (clazz.isModuleClass) {
+        // cf. https://gist.github.com/xeno-by/4985929
+        val mod = clazz.companionSymbol.asModule
+        val mm  = cm.reflectModule(mod)
+        mm.instance
+      } else {
+        throw new IllegalStateException(s"Cannot instantiate $tpe")
+      }
+    }
+  }
 
   def apply[A: TypeTag]: Shape = {
     shapeFromType(typeOf[A])
@@ -79,7 +113,8 @@ object Shape {
           Shape.Product(tpe, args)
 
         } else if (clazz.isSealed) {
-          val sub: Vec[Shape] = clazz.knownDirectSubclasses.map(sym => shapeFromType(sym.asType.toType))(breakOut)
+          val syms            = clazz.knownDirectSubclasses.toIndexedSeq.sortBy(_.name.toString)
+          val sub: Vec[Shape] = syms.map(sym => shapeFromType(sym.asType.toType))
           Shape.Variant(tpe, sub)
 
         } else {
@@ -92,4 +127,6 @@ object Shape {
 }
 sealed trait Shape {
   def tpe: Type
+  /** Tries to instantiate this shape. Throws a runtime exception if not possible (e.g. default args missing) */
+  def instantiate(): Any
 }

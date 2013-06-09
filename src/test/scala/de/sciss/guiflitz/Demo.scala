@@ -3,8 +3,16 @@ package de.sciss.guiflitz
 import scala.swing.{Button, BorderPanel, Frame, SimpleSwingApplication}
 import de.sciss.swingplus.CloseOperation
 import de.sciss.swingplus.Implicits._
+import javax.swing.UIManager
 
 object Demo extends SimpleSwingApplication {
+  val useNimbus = false
+
+  val nimbusOption = if (!useNimbus) None else UIManager.getInstalledLookAndFeels.collectFirst {
+    case info if info.getName == "Nimbus" => info.getClassName
+  }
+  nimbusOption.foreach(UIManager.setLookAndFeel _)
+
   lazy val top = new Frame { me =>
     title     = "GUIFlitz"
     val view  = AutoView(Person.Example)
