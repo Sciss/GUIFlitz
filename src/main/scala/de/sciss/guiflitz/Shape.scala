@@ -116,7 +116,7 @@ object Shape {
 
       case _ =>
         val tsym  = tpe.typeSymbol
-        println(s"Type symbol $tsym; isClass? ${tsym.isClass}")
+        // println(s"Type symbol $tsym; isClass? ${tsym.isClass}")
         val clazz = tsym.asClass
         if (clazz.isCaseClass && !clazz.isModuleClass) {
           val (im, ts, mApply) = getApplyMethod(clazz)
