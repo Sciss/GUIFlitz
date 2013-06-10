@@ -1,3 +1,28 @@
+/*
+ *  AutoViewImpl.scala
+ *  (GUIFlitz)
+ *
+ *  Copyright (c) 2013 Hanns Holger Rutz. All rights reserved.
+ *
+ *  This software is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either
+ *  version 2, june 1991 of the License, or (at your option) any later version.
+ *
+ *  This software is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ *  General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License (gpl.txt) along with this software; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *
+ *  For further information, please contact Hanns Holger Rutz at
+ *  contact@sciss.de
+ */
+
 package de.sciss.guiflitz
 package impl
 
@@ -8,23 +33,26 @@ import de.sciss.swingplus.Spinner
 import de.sciss.swingplus.Implicits._
 import scala.swing.event.{SelectionChanged, ButtonClicked, ValueChanged}
 import collection.immutable.{IndexedSeq => Vec}
-import scala.swing.{Alignment, Label, Component, Swing, CheckBox, BoxPanel, Orientation, TextField, ComboBox}
+import scala.swing.{FlowPanel, Button, Alignment, Label, Component, Swing, CheckBox, BoxPanel, Orientation, TextField, ComboBox}
 
 private[guiflitz] object AutoViewImpl {
+  private def log(what: => String) {
+    if (AutoView.showLog) println(s"<auto-view> $what")
+  }
 
   def apply[A: TypeTag](init: A): AutoView[A] = {
     val shape = Shape[A]
-    val view  = mkView(init, shape)
+    val view  = mkView(init, shape, nested = false)
     view.asInstanceOf[AutoView[A]]
   }
 
-  private def mkView(init: Any, shape: Shape): AutoView[_] =
+  private def mkView(init: Any, shape: Shape, nested: Boolean): AutoView[_] =
     (init, shape) match {
       case (i: Int    , Shape.Int               )  => mkIntSpinner(i)
       case (d: Double , Shape.Double            )  => mkDoubleSpinner(d)
       case (s: String , Shape.String            )  => mkTextField(s)
       case (b: Boolean, Shape.Boolean           )  => mkCheckBox(b)
-      case (p: Product, Shape.Product(tpe, args))  => mkProduct(p, tpe, args)
+      case (p: Product, Shape.Product(tpe, args))  => mkProduct(p, tpe, args, nested = nested)
       case (_         , v @ Shape.Variant(_, _ ))  => mkVariant(init, v)
       // case (_,          Shape.Other(tpe)        )  => mkLabel(tpe)
       case _ => throw new IllegalArgumentException(s"Shape $shape has no supported view")
@@ -62,12 +90,14 @@ private[guiflitz] object AutoViewImpl {
 
   private def mkVariant(init: Any, v: Shape.Variant): AutoView[Any] = {
     val cell  = Cell(init)
-    var ggVar = Option.empty[AutoView[Any]]
+    var ggVar = Option.empty[AutoView[_]]
     val items = v.sub.map(_.tpe.typeSymbol.name.toString)
 
     lazy val comp: BoxPanel = new BoxPanel(Orientation.Vertical) {
       override lazy val peer = {
         val p = new javax.swing.JPanel with SuperMixin {
+          // XXX TODO: this should allow us to align the outer label properly
+          // so that it always appears next to the combo box. Unfortunately, that doesn't work.
           override def getBaseline(width: Int, height: Int) = combo.peer.getBaseline(width, height)
         }
         val l = new javax.swing.BoxLayout(p, Orientation.Vertical.id)
@@ -84,20 +114,33 @@ private[guiflitz] object AutoViewImpl {
     }
 
     def updateGUI(idx: Int) {
+      log(s"updateGUI($idx)")
+      var dirty = false
       ggVar.foreach { oldView =>
+        log("remove old sub view")
         oldView.cell.removeListener(subL)
         ggVar = None
-        if (comp.contents.size == 3) comp.contents.remove(1, 2)
+        if (comp.contents.size == 3) {
+          comp.contents.remove(1, 2)
+          dirty = true
+        }
       }
       v.sub(idx) match {
         case Shape.Other(_) =>  // no additinal view
+          log("new value has no view")
         case shp =>
-          val newView = mkView(cell(), shp)
+          log("adding new sub view")
+          val newView = mkView(cell(), shp, nested = true)
           newView.cell.addListener(subL)
           comp.contents += Swing.VStrut(4)
-          comp.contents += newView.component
+          // there is a problem with directly adding an AutoView[Product] component
+          // (i.e. SpringPanel) -- for whatever reason, if we put that into another
+          // container, such as FlowPanel, we avoid layout garbage.
+          comp.contents += new FlowPanel(newView.component)  // Button("Hallo") {}
+          ggVar = Some(newView)
+          dirty = true
       }
-      comp.revalidate()
+      if (dirty) comp.revalidate()
     }
 
     lazy val l: Cell.Listener[Any] = {
@@ -105,29 +148,33 @@ private[guiflitz] object AutoViewImpl {
         val valTpe = v.find(value)
         val valIdx = valTpe.map(t => v.sub.indexOf(t)).getOrElse(-1)
         if (valIdx >= 0) {
+          combo.reactions -= gl
           combo.selection.index = valIdx
+          combo.reactions += gl
           updateGUI(valIdx)
+        }
+    }
+
+    lazy val gl: PartialFunction[Any, Unit] = {
+      case SelectionChanged(_) =>
+        cell.removeListener(l)
+        val idx = combo.selection.index
+        if (idx >= 0) try {
+          val subShape  = v.sub(idx)
+          val subObj    = subShape.instantiate()
+          cell()        = subObj
+        } finally {
+          cell.addListener(l)
+          updateGUI(idx)
         }
     }
 
     lazy val combo: ComboBox[String] = new ComboBox(items) {
       listenTo(selection)
-      reactions += {
-        case SelectionChanged(_) =>
-          cell.removeListener(l)
-          val idx = selection.index
-          if (idx >= 0) try {
-            val subShape  = v.sub(idx)
-            val subObj    = subShape.instantiate()
-            cell()        = subObj
-          } finally {
-            cell.addListener(l)
-            updateGUI(idx)
-          }
-      }
+      reactions += gl
     }
 
-    comp.contents += combo
+    comp.contents += combo // new FlowPanel(combo)
     l(init)
     cell.addListener(l)
 
@@ -169,10 +216,11 @@ private[guiflitz] object AutoViewImpl {
     new Impl(cell, comp)
   }
 
-  private def mkProduct(init: Product, tpe: Type, args: Vec[Shape.Arg]): AutoView[Product] = {
+  private def mkProduct(init: Product, tpe: Type, args: Vec[Shape.Arg], nested: Boolean): AutoView[Product] = {
     val cell    = Cell(init)
     val comp    = new SpringPanel
-    comp.border = Swing.TitledBorder(Swing.EtchedBorder, tpe.typeSymbol.name.toString)
+    val edge    = Swing.EtchedBorder
+    comp.border = if (nested) edge else Swing.TitledBorder(edge, tpe.typeSymbol.name.toString)
     import comp.cons
 
     import Springs._
@@ -222,7 +270,7 @@ private[guiflitz] object AutoViewImpl {
 
     args.zipWithIndex.foreach { case (arg, idx) =>
       val lb = new Label(s"${arg.name.capitalize}:", null, Alignment.Trailing)
-      val av = mkView(invokeGetter(idx), arg.shape).asInstanceOf[AutoView[Any]]
+      val av = mkView(invokeGetter(idx), arg.shape, nested = true).asInstanceOf[AutoView[Any]]
 
       lazy val l2: Cell.Listener[Any] = {
         case value =>

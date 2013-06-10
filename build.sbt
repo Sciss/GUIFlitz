@@ -22,8 +22,8 @@ libraryDependencies <+= scalaVersion { sv =>
 }
 
 libraryDependencies ++= Seq(
-  "de.sciss"       %% "swingplus"        % "0.0.+",
-  "de.sciss"       %% "model"            % "0.3.+"
+  "de.sciss" %% "swingplus" % "0.0.+",
+  "de.sciss" %% "model"     % "0.3.+"
 )
 
 retrieveManaged := true
