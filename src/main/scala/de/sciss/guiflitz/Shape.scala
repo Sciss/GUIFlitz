@@ -75,23 +75,30 @@ object Shape {
 
   private def shapeFromType(tpe: Type): Shape = {
     tpe match {
-      case t if t <:< typeOf[Int]       => Shape.Int
-      case t if t <:< typeOf[Double]    => Shape.Double
-      case t if t <:< typeOf[String]    => Shape.String
-      case t if t <:< typeOf[Boolean]   => Shape.Boolean
-      case t if t <:< typeOf[Vec[Any]]  =>
+      case t if t <:< typeOf[Int]         => Shape.Int
+      case t if t <:< typeOf[Double]      => Shape.Double
+      case t if t <:< typeOf[String]      => Shape.String
+      case t if t <:< typeOf[Boolean]     => Shape.Boolean
+      //      case t if t <:< typeOf[Option[Any]] =>
+      //        val ta  = t.asInstanceOf[ru.TypeRefApi].args.head
+      //        val sa  = shapeFromType(ta)
+      //        Shape.Option(tpe, sa)
+
+      case t if t <:< typeOf[Vec[Any]]    =>
         // cf. stackoverflow nr. 12842729
         val ta  = t.asInstanceOf[ru.TypeRefApi].args.head
         val sa  = shapeFromType(ta)
         Shape.Vector(tpe, sa)
 
       case _ =>
-        val clazz = tpe.typeSymbol.asClass
+        val tsym  = tpe.typeSymbol
+        println(s"Type symbol $tsym; isClass? ${tsym.isClass}")
+        val clazz = tsym.asClass
         if (clazz.isCaseClass && !clazz.isModuleClass) {
           val (im, ts, mApply) = getApplyMethod(clazz)
           val as    = mApply.paramss.flatten
           val args: Vec[Arg] = as.zipWithIndex.map { case (p, i) =>
-            try {
+            // try {
               val name    = p.name
               val mDef_?  = ts.member(newTermName(s"apply$$default$$${i+1}"))
               val default = if (mDef_?.isMethod) {
@@ -100,21 +107,23 @@ object Shape {
               } else {
                 None
               }
-              // println(s"$p - isParameter? ${p.isParameter}")
               val ptp     = p.typeSignature
+              // val ptp     = p.typeSignatureIn(tpe)
+              // println(s"$p - isParameter? ${p.isParameter}; signature $ptp")
               val as      = shapeFromType(ptp)
               Arg(name.decoded, as, default)
 
-            } catch {
-              case NonFatal(e) =>
-                println(s"For type $clazz, parameter $p at index $i has no default value")
-                throw e
-            }
+            //            } catch {
+            //              case NonFatal(e) =>
+            //                println(s"For type $clazz, parameter $p at index $i has no default value")
+            //                throw e
+            //            }
           } (breakOut)
           Shape.Product(tpe, args)
 
         } else if (clazz.isSealed) {
           val syms            = clazz.knownDirectSubclasses.toIndexedSeq.sortBy(_.name.toString)
+          clazz.companionSymbol.typeSignature // work around stackoverflow no. 17012294
           val sub: Vec[Shape] = syms.map(sym => shapeFromType(sym.asType.toType))
           Shape.Variant(tpe, sub)
 

@@ -1,16 +1,22 @@
 package de.sciss.guiflitz
 
-// object Gender {
+object Gender {
   case object Male   extends Gender
   case object Female extends Gender
   case object Other  extends Gender
-// }
+}
 sealed trait Gender
 
 object Person {
-  val Example = Person(name = "Nam June", age = 80, flux = true, num = 3.1415, gender = /* Gender.*/ Male)
+  val Example = Person(name = "Nam June", age = 80, flux = true, num = 3.1415, gender = Gender.Male // ,
+//                       spouse =
+//                         Some(
+//                          Person("Shigeko", age = 75, flux = true, num = 1.234, gender = Female,
+//                           spouse = None /* well... don't do cycles yet */)
+//                        )
+                      )
 }
-case class Person(name: String, age: Int, flux: Boolean, num: Double, gender: Gender)
+case class Person(name: String, age: Int, flux: Boolean, num: Double, gender: Gender) // , spouse: Option[Person])
 
 object Test {
   import reflect.runtime.universe._
