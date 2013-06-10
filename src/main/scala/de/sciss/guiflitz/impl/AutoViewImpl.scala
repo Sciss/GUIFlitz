@@ -6,9 +6,9 @@ import ru.{Type, TypeTag}
 import javax.swing.{Spring, SpinnerNumberModel}
 import de.sciss.swingplus.Spinner
 import de.sciss.swingplus.Implicits._
-import scala.swing._
 import scala.swing.event.{SelectionChanged, ButtonClicked, ValueChanged}
 import collection.immutable.{IndexedSeq => Vec}
+import scala.swing.{Alignment, Label, Component, Swing, CheckBox, BoxPanel, Orientation, TextField, ComboBox}
 
 private[guiflitz] object AutoViewImpl {
 
@@ -26,6 +26,7 @@ private[guiflitz] object AutoViewImpl {
       case (b: Boolean, Shape.Boolean           )  => mkCheckBox(b)
       case (p: Product, Shape.Product(tpe, args))  => mkProduct(p, tpe, args)
       case (_         , v @ Shape.Variant(_, _ ))  => mkVariant(init, v)
+      // case (_,          Shape.Other(tpe)        )  => mkLabel(tpe)
       case _ => throw new IllegalArgumentException(s"Shape $shape has no supported view")
     }
 
@@ -61,31 +62,75 @@ private[guiflitz] object AutoViewImpl {
 
   private def mkVariant(init: Any, v: Shape.Variant): AutoView[Any] = {
     val cell  = Cell(init)
+    var ggVar = Option.empty[AutoView[Any]]
     val items = v.sub.map(_.tpe.typeSymbol.name.toString)
-    val comp  = new ComboBox(items) {
-      val l: Cell.Listener[Any] = {
-        case value =>
-          val valTpe = v.find(value)
-          val valIdx = valTpe.map(t => v.sub.indexOf(t)).getOrElse(-1)
-          if (valIdx >= 0) {
-            selection.index = valIdx
-          }
+
+    lazy val comp: BoxPanel = new BoxPanel(Orientation.Vertical) {
+      override lazy val peer = {
+        val p = new javax.swing.JPanel with SuperMixin {
+          override def getBaseline(width: Int, height: Int) = combo.peer.getBaseline(width, height)
+        }
+        val l = new javax.swing.BoxLayout(p, Orientation.Vertical.id)
+        p.setLayout(l)
+        p
       }
+    }
+
+    lazy val subL: Cell.Listener[Any] = {
+      case subV =>
+        cell.removeListener(l)
+        cell() = subV
+        cell.addListener(l)
+    }
+
+    def updateGUI(idx: Int) {
+      ggVar.foreach { oldView =>
+        oldView.cell.removeListener(subL)
+        ggVar = None
+        if (comp.contents.size == 3) comp.contents.remove(1, 2)
+      }
+      v.sub(idx) match {
+        case Shape.Other(_) =>  // no additinal view
+        case shp =>
+          val newView = mkView(cell(), shp)
+          newView.cell.addListener(subL)
+          comp.contents += Swing.VStrut(4)
+          comp.contents += newView.component
+      }
+      comp.revalidate()
+    }
+
+    lazy val l: Cell.Listener[Any] = {
+      case value =>
+        val valTpe = v.find(value)
+        val valIdx = valTpe.map(t => v.sub.indexOf(t)).getOrElse(-1)
+        if (valIdx >= 0) {
+          combo.selection.index = valIdx
+          updateGUI(valIdx)
+        }
+    }
+
+    lazy val combo: ComboBox[String] = new ComboBox(items) {
       listenTo(selection)
       reactions += {
         case SelectionChanged(_) =>
           cell.removeListener(l)
-          try {
-            val subShape  = v.sub(selection.index)
+          val idx = selection.index
+          if (idx >= 0) try {
+            val subShape  = v.sub(idx)
             val subObj    = subShape.instantiate()
             cell()        = subObj
           } finally {
             cell.addListener(l)
+            updateGUI(idx)
           }
       }
-      l(init)
-      cell.addListener(l)
     }
+
+    comp.contents += combo
+    l(init)
+    cell.addListener(l)
+
     new Impl(cell, comp)
   }
 
@@ -229,4 +274,5 @@ private[guiflitz] object AutoViewImpl {
 
     // private val lens = Lenser[A]
     // lens.name.set(value)("hallo")
-  }}
+  }
+}

@@ -10,6 +10,7 @@ object AutoView {
 }
 trait AutoView[A] {
   def value: A
+  /** Important: This is not thread safe at the moment. Update the cell only on the EDT. */
   def cell: Cell[A]
   def component: Component
 }

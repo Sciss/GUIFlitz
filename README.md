@@ -21,3 +21,9 @@ The current version `v` is `"0.0.+"`
 ## example
 
 An example application is provided by means of `sbt test:run`. The source class is `Demo`.
+
+## limitations
+
+- currently supported types: `Int`, `Double`, `Boolean`, `String`, case classes and singleton objects
+- does not work yet with type parameters, e.g. `case class Foo(opt: Option[Int])` fails because of `Option` taking a type parameter.
+- `IndexedSeq` view not yet implemented

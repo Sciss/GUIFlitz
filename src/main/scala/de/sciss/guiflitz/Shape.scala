@@ -123,7 +123,7 @@ object Shape {
 
         } else if (clazz.isSealed) {
           val syms            = clazz.knownDirectSubclasses.toIndexedSeq.sortBy(_.name.toString)
-          clazz.companionSymbol.typeSignature // work around stackoverflow no. 17012294
+          clazz.companionSymbol.typeSignature // !!! work around stackoverflow no. 17012294
           val sub: Vec[Shape] = syms.map(sym => shapeFromType(sym.asType.toType))
           Shape.Variant(tpe, sub)
 
