@@ -7,16 +7,18 @@ object Gender {
 }
 sealed trait Gender
 
+sealed trait MaybePerson
+case object NoPerson extends MaybePerson
+
 object Person {
-  val Example = Person(name = "Nam June", age = 80, flux = true, num = 3.1415, gender = Gender.Other("schoko") // ,
-//                       spouse =
-//                         Some(
-//                          Person("Shigeko", age = 75, flux = true, num = 1.234, gender = Female,
-//                           spouse = None /* well... don't do cycles yet */)
-//                        )
+  val Example = Person(name = "Nam June", age = 80, flux = true, num = 3.1415, gender = Gender.Other("schoko"),
+                       spouse =
+                          Person("Shigeko", age = 75, flux = true, num = 1.234, gender = Gender.Female,
+                            spouse = NoPerson)
                       )
 }
-case class Person(name: String, age: Int, flux: Boolean, num: Double, gender: Gender) // , spouse: Option[Person])
+case class Person(name: String, age: Int, flux: Boolean, num: Double, gender: Gender, spouse: MaybePerson)
+  extends MaybePerson
 
 object Test {
   import reflect.runtime.universe._

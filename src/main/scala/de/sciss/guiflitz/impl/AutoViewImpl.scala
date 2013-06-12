@@ -91,7 +91,7 @@ private[guiflitz] object AutoViewImpl {
   private def mkVariant(init: Any, v: Shape.Variant): AutoView[Any] = {
     val cell  = Cell(init)
     var ggVar = Option.empty[AutoView[_]]
-    val items = v.sub.map(_.tpe.typeSymbol.name.toString)
+    val items = v.sub.map(_.typeSymbol.name.toString)
 
     lazy val comp: BoxPanel = new BoxPanel(Orientation.Vertical) {
       override lazy val peer = {
@@ -125,7 +125,7 @@ private[guiflitz] object AutoViewImpl {
           dirty = true
         }
       }
-      v.sub(idx) match {
+      Shape.fromType(v.sub(idx)) match {
         case Shape.Other(_) =>  // no additinal view
           log("new value has no view")
         case shp =>
@@ -160,7 +160,7 @@ private[guiflitz] object AutoViewImpl {
         cell.removeListener(l)
         val idx = combo.selection.index
         if (idx >= 0) try {
-          val subShape  = v.sub(idx)
+          val subShape  = Shape.fromType(v.sub(idx))
           val subObj    = subShape.instantiate()
           cell()        = subObj
         } finally {
