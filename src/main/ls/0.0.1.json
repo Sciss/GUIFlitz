@@ -1,0 +1,25 @@
+{
+  "organization" : "de.sciss",
+  "name" : "GUIFlitz",
+  "version" : "0.0.1",
+  "description" : "Automatic GUI from case classes for rapid prototyping",
+  "site" : "https://github.com/Sciss/GUIFlitz",
+  "tags" : [ "swing", "gui" ],
+  "docs" : "",
+  "resolvers" : [ "https://oss.sonatype.org/content/repositories/releases" ],
+  "dependencies" : [ {
+    "organization" : "de.sciss",
+    "name" : "swingplus",
+    "version" : "0.0.+"
+  }, {
+    "organization" : "de.sciss",
+    "name" : "model",
+    "version" : "0.3.+"
+  } ],
+  "scalas" : [ "2.10.2" ],
+  "licenses" : [ {
+    "name" : "GPL v2+",
+    "url" : "http://www.gnu.org/licenses/gpl-2.0.txt"
+  } ],
+  "sbt" : false
+}

@@ -1,6 +1,7 @@
 package de.sciss.guiflitz
 
-import scala.swing.{Button, BorderPanel, Frame, SimpleSwingApplication}
+import scala.swing.{Swing, BoxPanel, Orientation, Button, BorderPanel, Frame, SimpleSwingApplication}
+import Swing._
 import de.sciss.swingplus.CloseOperation
 import de.sciss.swingplus.Implicits._
 import javax.swing.UIManager
@@ -13,13 +14,27 @@ object Demo extends SimpleSwingApplication {
   }
   nimbusOption.foreach(UIManager.setLookAndFeel _)
 
+  lazy val view = {
+    val c = AutoView.Config()
+    c.small = true
+    AutoView(Person.Example, c)
+  }
+
+  lazy val postBut = {
+    val res = Button("Post") { println(view.cell()) }
+    res.peer.putClientProperty("JButton.buttonType", "segmentedCapsule")
+    res.peer.putClientProperty("JButton.segmentPosition", "only")
+    res
+  }
+
   lazy val top = new Frame { me =>
     title     = "GUIFlitz"
-    val view  = AutoView(Person.Example)
     contents  = new BorderPanel {
       add(view.component, BorderPanel.Position.Center)
-      add(Button("Post") {
-        println(view.cell())
+      add(new BoxPanel(Orientation.Horizontal) {
+        contents += HGlue
+        contents += postBut
+        contents += HGlue
       }, BorderPanel.Position.South)
     }
     me.defaultCloseOperation = CloseOperation.Exit

@@ -27,3 +27,4 @@ An example application is provided by means of `sbt test:run`. The source class 
 - currently supported types: `Int`, `Double`, `Boolean`, `String`, case classes and singleton objects
 - does not work yet with type parameters, e.g. `case class Foo(opt: Option[Int])` fails because of `Option` taking a type parameter.
 - `IndexedSeq` view not yet implemented
+- titled border doesn't respect `small` config (should adjust font)

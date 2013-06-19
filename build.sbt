@@ -1,6 +1,6 @@
 name := "GUIFlitz"
 
-version := "0.0.1-SNAPSHOT"
+version := "0.0.1"
 
 organization := "de.sciss"
 
@@ -59,3 +59,14 @@ pomExtra <<= name { n =>
   </developer>
 </developers>
 }
+
+// ---- ls.implicit.ly ----
+
+seq(lsSettings :_*)
+
+(LsKeys.tags in LsKeys.lsync) := Seq("swing", "gui")
+
+(LsKeys.ghUser in LsKeys.lsync) := Some("Sciss")
+
+(LsKeys.ghRepo in LsKeys.lsync) <<= name(Some(_))
+

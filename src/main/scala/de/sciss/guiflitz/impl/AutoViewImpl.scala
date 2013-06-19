@@ -28,43 +28,76 @@ package impl
 
 import reflect.runtime.{universe => ru, currentMirror => cm}
 import ru.{Type, TypeTag}
-import javax.swing.{Spring, SpinnerNumberModel}
+import javax.swing.{JComponent, Spring, SpinnerNumberModel}
 import de.sciss.swingplus.Spinner
 import de.sciss.swingplus.Implicits._
 import scala.swing.event.{SelectionChanged, ButtonClicked, ValueChanged}
 import collection.immutable.{IndexedSeq => Vec}
-import scala.swing.{FlowPanel, Button, Alignment, Label, Component, Swing, CheckBox, BoxPanel, Orientation, TextField, ComboBox}
+import scala.swing.{ScrollPane, FlowPanel, Alignment, Label, Component, Swing, CheckBox, BoxPanel, Orientation, TextField, ComboBox}
+import language.existentials
+import de.sciss.model.Model
 
 private[guiflitz] object AutoViewImpl {
+  private final val PROP_TOP = "de.sciss.guiflitz.top"
+
+  import AutoView.Config
+
+  private type Tuple = (Model[Any], Component)
+
   private def log(what: => String) {
     if (AutoView.showLog) println(s"<auto-view> $what")
   }
 
-  def apply[A: TypeTag](init: A): AutoView[A] = {
-    val shape = Shape[A]
-    val view  = mkView(init, shape, nested = false)
-    view.asInstanceOf[AutoView[A]]
+  def apply[A: TypeTag](init: A, config: Config): AutoView[A] = {
+    val shape         = Shape[A]
+    val (cell, comp)  = mkView(init, shape, config, nested = false)
+    comp.peer.putClientProperty(PROP_TOP, true)
+    val cellC         = cell.asInstanceOf[Cell[A]]  // grmpff....
+    val compS         = if (config.scroll) {
+      val scroll    = new ScrollPane(comp)
+      scroll.border = Swing.EmptyBorder
+      scroll
+    } else {
+      comp
+    }
+    new Impl(config, cellC, compS)
   }
 
-  private def mkView(init: Any, shape: Shape, nested: Boolean): AutoView[_] =
-    (init, shape) match {
-      case (i: Int    , Shape.Int               )  => mkIntSpinner(i)
+  @inline private def mkSmall(comp: Component, config: Config) {
+    if (config.small) {
+      def apply(c: JComponent) {
+        c.putClientProperty("JComponent.sizeVariant", "small")
+        c.getComponents.foreach {
+          case jc: JComponent => apply(jc)
+          case _ =>
+        }
+      }
+      apply(comp.peer)
+    }
+  }
+
+  private def mkView(init: Any, shape: Shape, config: Config, nested: Boolean): Tuple = {
+    val res: Tuple = (init, shape) match {
+      case (i: Int    , Shape.Int               )  => mkIntSpinner   (i)
       case (d: Double , Shape.Double            )  => mkDoubleSpinner(d)
-      case (s: String , Shape.String            )  => mkTextField(s)
-      case (b: Boolean, Shape.Boolean           )  => mkCheckBox(b)
-      case (p: Product, Shape.Product(tpe, args))  => mkProduct(p, tpe, args, nested = nested)
-      case (_         , v @ Shape.Variant(_, _ ))  => mkVariant(init, v)
+      case (s: String , Shape.String            )  => mkTextField    (s)
+      case (b: Boolean, Shape.Boolean           )  => mkCheckBox     (b)
+      case (p: Product, Shape.Product(tpe, args))  => mkProduct      (p, tpe, args, config, nested = nested)
+      case (_         , v @ Shape.Variant(_, _ ))  => mkVariant      (init, v, config)
       // case (_,          Shape.Other(tpe)        )  => mkLabel(tpe)
       case _ => throw new IllegalArgumentException(s"Shape $shape has no supported view")
     }
+    mkSmall(res._2, config)
+    res
+  }
 
-  private def mkIntSpinner(init: Int): AutoView[Int] =
+  private def mkIntSpinner(init: Int): Tuple =
     mkSpinner[Int](new SpinnerNumberModel(init, Int.MinValue, Int.MaxValue, 1))(_.intValue())
 
-  private def mkDoubleSpinner(init: Double): AutoView[Double] =
+  private def mkDoubleSpinner(init: Double): Tuple =
     mkSpinner[Double](new SpinnerNumberModel(init, Double.MinValue, Double.MaxValue, 1))(_.doubleValue())
 
-  private def mkSpinner[A](m: SpinnerNumberModel)(fun: Number => A): AutoView[A] = {
+  private def mkSpinner[A](m: SpinnerNumberModel)(fun: Number => A): Tuple = {
     val cell  = Cell(fun(m.getNumber))
     // val m     = new SpinnerNumberModel(init, Double.PositiveInfinity, Double.NegativeInfinity, 1)
     val l: Cell.Listener[A] = {
@@ -85,12 +118,12 @@ private[guiflitz] object AutoViewImpl {
           cell.addListener(l)
       }
     }
-    new Impl(cell, comp)
+    (cell, comp)
   }
 
-  private def mkVariant(init: Any, v: Shape.Variant): AutoView[Any] = {
+  private def mkVariant(init: Any, v: Shape.Variant, config: Config): Tuple = {
     val cell  = Cell(init)
-    var ggVar = Option.empty[AutoView[_]]
+    var ggVar = Option.empty[Tuple]
     val items = v.sub.map(_.typeSymbol.name.toString)
 
     lazy val comp: BoxPanel = new BoxPanel(Orientation.Vertical) {
@@ -116,9 +149,9 @@ private[guiflitz] object AutoViewImpl {
     def updateGUI(idx: Int) {
       log(s"updateGUI($idx)")
       var dirty = false
-      ggVar.foreach { oldView =>
+      ggVar.foreach { case (oldCell, oldComp) =>
         log("remove old sub view")
-        oldView.cell.removeListener(subL)
+        oldCell.removeListener(subL)
         ggVar = None
         if (comp.contents.size == 3) {
           comp.contents.remove(1, 2)
@@ -130,17 +163,30 @@ private[guiflitz] object AutoViewImpl {
           log("new value has no view")
         case shp =>
           log("adding new sub view")
-          val newView = mkView(cell(), shp, nested = true)
-          newView.cell.addListener(subL)
+          val newView @ (newCell, newComp) = mkView(cell(), shp, config, nested = true)
+          newCell.addListener(subL)
           comp.contents += Swing.VStrut(4)
           // there is a problem with directly adding an AutoView[Product] component
           // (i.e. SpringPanel) -- for whatever reason, if we put that into another
           // container, such as FlowPanel, we avoid layout garbage.
-          comp.contents += new FlowPanel(newView.component)  // Button("Hallo") {}
+          comp.contents += new FlowPanel(newComp)  // Button("Hallo") {}
           ggVar = Some(newView)
           dirty = true
       }
-      if (dirty) comp.revalidate()
+      if (dirty) {
+        /* @tailrec */ def invalidateAll(c: JComponent) {
+          // WTF? re-layout only works properly if we detach nested containers by putting them on successive EDT calls
+          Swing.onEDT {
+            c.revalidate()
+            c.repaint()
+            if (c.getClientProperty(PROP_TOP) != true) c.getParent match {
+              case p: JComponent => invalidateAll(p)
+              case _ =>
+            }
+          }
+        }
+        invalidateAll(comp.peer)
+      }
     }
 
     lazy val l: Cell.Listener[Any] = {
@@ -175,13 +221,14 @@ private[guiflitz] object AutoViewImpl {
     }
 
     comp.contents += combo // new FlowPanel(combo)
+    // mkSmall(combo, config)
     l(init)
     cell.addListener(l)
 
-    new Impl(cell, comp)
+    (cell, comp)
   }
 
-  private def mkTextField(init: String): AutoView[String] = {
+  private def mkTextField(init: String): Tuple = {
     val cell  = Cell(init)
     val comp  = new TextField(init, 10) {
       val l: Cell.Listener[String] = {
@@ -195,10 +242,10 @@ private[guiflitz] object AutoViewImpl {
           cell.addListener(l)
       }
     }
-    new Impl(cell, comp)
+    (cell, comp)
   }
 
-  private def mkCheckBox(init: Boolean): AutoView[Boolean] = {
+  private def mkCheckBox(init: Boolean): Tuple = {
     val cell  = Cell(init)
     val comp  = new CheckBox {
       selected = init
@@ -213,10 +260,11 @@ private[guiflitz] object AutoViewImpl {
           cell.addListener(l)
       }
     }
-    new Impl(cell, comp)
+    (cell, comp)
   }
 
-  private def mkProduct(init: Product, tpe: Type, args: Vec[Shape.Arg], nested: Boolean): AutoView[Product] = {
+  private def mkProduct(init: Product, tpe: Type, args: Vec[Shape.Arg], config: Config,
+                        nested: Boolean): Tuple = {
     val cell    = Cell(init)
     val comp    = new SpringPanel
     val edge    = Swing.EtchedBorder
@@ -270,7 +318,8 @@ private[guiflitz] object AutoViewImpl {
 
     args.zipWithIndex.foreach { case (arg, idx) =>
       val lb = new Label(s"${arg.name.capitalize}:", null, Alignment.Trailing)
-      val av = mkView(invokeGetter(idx), arg.shape, nested = true).asInstanceOf[AutoView[Any]]
+      // mkSmall(lb, config)
+      val (avCell, avComp) = mkView(invokeGetter(idx), arg.shape, config, nested = true)
 
       lazy val l2: Cell.Listener[Any] = {
         case value =>
@@ -278,17 +327,17 @@ private[guiflitz] object AutoViewImpl {
           cell() = copy(idx, value)
           cell.addListener(l1)
       }
-      av.cell.addListener(l2)
+      avCell.addListener(l2)
 
       lazy val l1: Cell.Listener[Product] = {
         case value =>
-          av.cell.removeListener(l2)
-          av.cell() = invokeGetter(idx)
-          av.cell.addListener(l2)
+          avCell.removeListener(l2)
+          avCell.asInstanceOf[Cell[Any]].update(invokeGetter(idx))  // grmpff...
+          avCell.addListener(l2)
       }
       cell.addListener(l1)
 
-      val gg = av.component
+      val gg = avComp
       comp.contents  += lb
       comp.contents  += gg
       val clb         = cons(lb)
@@ -312,10 +361,10 @@ private[guiflitz] object AutoViewImpl {
     ccomp.right   = ggLeftSpring + ggWidthSpring + Spring.constant(4, 4, Int.MaxValue)
     ccomp.bottom  = bottomSpring + Spring.constant(4, 4, Int.MaxValue)
 
-    new Impl(cell, comp)
+    (cell, comp)
   }
 
-  private final class Impl[A](val cell: Cell[A], val component: Component) extends AutoView[A] {
+  private final class Impl[A](val config: Config, val cell: Cell[A], val component: Component) extends AutoView[A] {
     override def toString = s"AutoView@${hashCode().toHexString}"
 
     def value: A = cell()
