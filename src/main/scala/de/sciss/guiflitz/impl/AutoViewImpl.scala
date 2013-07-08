@@ -103,7 +103,6 @@ private[guiflitz] object AutoViewImpl {
     val l: Cell.Listener[A] = {
       case value => m.setValue(value)
     }
-    cell.addListener(l)
     val comp  = new Spinner(m) {
       preferredSize = {
         val d   = preferredSize
@@ -118,6 +117,7 @@ private[guiflitz] object AutoViewImpl {
           cell.addListener(l)
       }
     }
+    cell.addListener(l)
     (cell, comp)
   }
 
@@ -220,8 +220,8 @@ private[guiflitz] object AutoViewImpl {
       reactions += gl
     }
 
-    comp.contents += combo // new FlowPanel(combo)
-    // mkSmall(combo, config)
+    comp.contents += combo
+
     l(init)
     cell.addListener(l)
 
@@ -241,7 +241,9 @@ private[guiflitz] object AutoViewImpl {
           cell() = text
           cell.addListener(l)
       }
+      cell.addListener(l)
     }
+
     (cell, comp)
   }
 
@@ -259,6 +261,7 @@ private[guiflitz] object AutoViewImpl {
           cell() = selected
           cell.addListener(l)
       }
+      cell.addListener(l)
     }
     (cell, comp)
   }
