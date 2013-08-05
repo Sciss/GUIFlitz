@@ -2,6 +2,7 @@ package de.sciss.guiflitz
 
 import reflect.runtime.{universe => ru}
 
+/** Note: this does _not_ work. */
 object ProjectionTest extends App {
   trait Sys[S <: Sys[S]] {
     type Global
