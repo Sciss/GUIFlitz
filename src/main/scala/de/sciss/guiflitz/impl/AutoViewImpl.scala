@@ -82,6 +82,7 @@ private[guiflitz] object AutoViewImpl {
       case (d: Double , Shape.Double            )  => mkDoubleSpinner(d)
       case (s: String , Shape.String            )  => mkTextField    (s)
       case (b: Boolean, Shape.Boolean           )  => mkCheckBox     (b)
+      case (_         , Shape.Unit              )  => mkDummy        ()
       case (p: Product, Shape.Product(tpe, args))  => mkProduct      (p, tpe, args, config, nested = nested)
       case (_         , v @ Shape.Variant(_, _ ))  => mkVariant      (init, v, config)
       // case (_,          Shape.Other(tpe)        )  => mkLabel(tpe)
@@ -89,6 +90,12 @@ private[guiflitz] object AutoViewImpl {
     }
     mkSmall(res._2, config)
     res
+  }
+
+  private def mkDummy(): Tuple = {
+    val cell  = Cell[Unit]()
+    val comp  = Swing.HStrut(0)
+    (cell, comp)
   }
 
   private def mkIntSpinner(init: Int): Tuple =

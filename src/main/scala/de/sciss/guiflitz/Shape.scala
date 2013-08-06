@@ -47,6 +47,10 @@ object Shape {
     val tpe = typeOf[Boolean]
     def instantiate() = false
   }
+  case object Unit extends Shape {
+    val tpe = typeOf[Unit]
+    def instantiate() = ()
+  }
   case class Vector (tpe: Type, elem: Shape)     extends Shape {
     def instantiate() = Vec.empty
   }
@@ -105,10 +109,11 @@ object Shape {
 
   def fromType(tpe: Type): Shape = {
     tpe match {
-      case t if t <:< typeOf[Int]         => Shape.Int
-      case t if t <:< typeOf[Double]      => Shape.Double
-      case t if t <:< typeOf[String]      => Shape.String
-      case t if t <:< typeOf[Boolean]     => Shape.Boolean
+      case t if t <:< typeOf[Int    ] => Shape.Int
+      case t if t <:< typeOf[Double ] => Shape.Double
+      case t if t <:< typeOf[String ] => Shape.String
+      case t if t <:< typeOf[Boolean] => Shape.Boolean
+      case t if t <:< typeOf[Unit   ] => Shape.Unit
       //      case t if t <:< typeOf[Option[Any]] =>
       //        val ta  = t.asInstanceOf[ru.TypeRefApi].args.head
       //        val sa  = fromType(ta)
