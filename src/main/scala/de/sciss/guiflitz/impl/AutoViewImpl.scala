@@ -28,14 +28,15 @@ package impl
 
 import reflect.runtime.{universe => ru, currentMirror => cm}
 import ru.{Type, TypeTag}
-import javax.swing.{JComponent, Spring, SpinnerNumberModel}
+import javax.swing.{JToolBar, JSeparator, JComponent, Spring, SpinnerNumberModel}
 import de.sciss.swingplus.Spinner
 import de.sciss.swingplus.Implicits._
 import scala.swing.event.{SelectionChanged, ButtonClicked, ValueChanged}
 import collection.immutable.{IndexedSeq => Vec}
-import scala.swing.{ScrollPane, FlowPanel, Alignment, Label, Component, Swing, CheckBox, BoxPanel, Orientation, TextField, ComboBox}
+import scala.swing.{BorderPanel, Button, ScrollPane, FlowPanel, Alignment, Label, Component, Swing, CheckBox, BoxPanel, Orientation, TextField, ComboBox}
 import language.existentials
 import de.sciss.model.Model
+import Swing._
 
 private[guiflitz] object AutoViewImpl {
   private final val PROP_TOP = "de.sciss.guiflitz.top"
@@ -85,6 +86,7 @@ private[guiflitz] object AutoViewImpl {
       case (_         , Shape.Unit              )  => mkDummy        ()
       case (p: Product, Shape.Product(tpe, args))  => mkProduct      (p, tpe, args, config, nested = nested)
       case (_         , v @ Shape.Variant(_, _ ))  => mkVariant      (init, v, config)
+      case (v: Vec[_] , Shape.Vector(_, cs)     )  => mkVector       (v, cs, config)
       // case (_,          Shape.Other(tpe)        )  => mkLabel(tpe)
       case _ => throw new IllegalArgumentException(s"Shape $shape has no supported view")
     }
@@ -98,8 +100,95 @@ private[guiflitz] object AutoViewImpl {
     (cell, comp)
   }
 
+  private def mkVector(init: Vec[Any], childShape: Shape, config: Config): Tuple = {
+    type Child      = (Cell[Any], Cell.Listener[Any])
+
+    val cell        = Cell(init)
+    val pane        = new BoxPanel(Orientation.Vertical)
+    var children    = Vec.empty[Child]
+
+    lazy val lVec: Cell.Listener[Vec[Any]] = {
+      case newVec =>
+        val trunc = math.max(0, children.size - newVec.size)
+        val inc   = math.max(0, newVec.size - children.size)
+
+        if (trunc > 0) {
+          val (newChildren, toDispose) = children.splitAt(newVec.size)
+          toDispose.foreach { case (childCell, lChild) => childCell.removeListener(lChild) }
+          pane.contents.trimEnd(math.min(pane.contents.size, trunc * 2))
+          children = newChildren
+        }
+
+        (children zip newVec).foreach { case ((childCell, lChild), elem) =>
+          childCell.removeListener(lChild)
+          childCell.update(elem)
+          childCell.addListener(lChild)
+        }
+
+        if (inc > 0) {
+          val off = children.size
+          newVec.takeRight(inc).zipWithIndex.foreach { case (elem, idx) =>
+            children :+= mkChild(off + idx, elem)
+          }
+        }
+
+        if (trunc > 0 || inc > 0) {
+          revalidate(pane)
+        }
+    }
+    cell.addListener(lVec)
+
+    def mkChild(idx: Int, elem: Any): Child = {
+      if (idx > 0) {
+        val sep        = Component.wrap(new JSeparator())
+        sep.border     = EmptyBorder(top = 2, left = 0, bottom = 2, right = 0)
+        pane.contents += sep
+      }
+      val (childCell, childComp) = mkView(init = elem, shape = childShape, config = config, nested = false)
+      pane.contents += childComp
+
+      lazy val lChild: Cell.Listener[Any] = {
+        case newElem =>
+          cell.removeListener(lVec)
+          cell() = cell().updated(idx, newElem)
+          cell.addListener(lVec)
+      }
+
+      childCell.addListener(lChild)
+      (childCell.asInstanceOf[Cell[Any]], lChild)
+    }
+
+    children = init.zipWithIndex.map { case (elem, idx) =>
+      mkChild(idx, elem)
+    }
+
+    val scroll  = new ScrollPane(pane)
+    val tbj     = new JToolBar
+    tbj.setFloatable(false)
+    tbj.setBorderPainted(false)
+    val tb      = Component.wrap(tbj)
+    val ggAdd   = Button("+") {
+      cell() = cell() :+ childShape.instantiate()
+    }
+    ggAdd.peer.putClientProperty("JButton.buttonType", "roundRect")
+    val ggRemove = Button("\u2212") {
+      cell() = cell().dropRight(1)
+    }
+    ggRemove.peer.putClientProperty("JButton.buttonType", "roundRect")
+    tbj.add(ggAdd   .peer)
+    tbj.add(ggRemove.peer)
+
+    val comp = new BorderPanel {
+      layoutManager.setVgap(0)
+      add(scroll, BorderPanel.Position.Center)
+      add(tb    , BorderPanel.Position.South )
+    }
+
+    (cell, comp)
+  }
+
   private def mkIntSpinner(init: Int): Tuple =
-    mkSpinner[Int](new SpinnerNumberModel(init, Int.MinValue, Int.MaxValue, 1))(_.intValue())
+    mkSpinner[Int   ](new SpinnerNumberModel(init, Int   .MinValue, Int   .MaxValue, 1))(_.intValue   ())
 
   private def mkDoubleSpinner(init: Double): Tuple =
     mkSpinner[Double](new SpinnerNumberModel(init, Double.MinValue, Double.MaxValue, 1))(_.doubleValue())
@@ -181,18 +270,7 @@ private[guiflitz] object AutoViewImpl {
           dirty = true
       }
       if (dirty) {
-        /* @tailrec */ def invalidateAll(c: JComponent) {
-          // WTF? re-layout only works properly if we detach nested containers by putting them on successive EDT calls
-          Swing.onEDT {
-            c.revalidate()
-            c.repaint()
-            if (c.getClientProperty(PROP_TOP) != true) c.getParent match {
-              case p: JComponent => invalidateAll(p)
-              case _ =>
-            }
-          }
-        }
-        invalidateAll(comp.peer)
+        revalidate(comp)
       }
     }
 
@@ -225,6 +303,7 @@ private[guiflitz] object AutoViewImpl {
     lazy val combo: ComboBox[String] = new ComboBox(items) {
       listenTo(selection)
       reactions += gl
+      peer.putClientProperty("JComboBox.isSquare", true)
     }
 
     comp.contents += combo
@@ -372,6 +451,21 @@ private[guiflitz] object AutoViewImpl {
     ccomp.bottom  = bottomSpring + Spring.constant(4, 4, Int.MaxValue)
 
     (cell, comp)
+  }
+
+  private def revalidate(comp: Component): Unit = {
+    /* @tailrec */ def loop(c: JComponent): Unit =
+      // WTF? re-layout only works properly if we detach nested containers by putting them on successive EDT calls
+      Swing.onEDT {
+        c.revalidate()
+        c.repaint()
+        if (c.getClientProperty(PROP_TOP) != true) c.getParent match {
+          case p: JComponent => loop(p)
+          case _ =>
+        }
+      }
+
+    loop(comp.peer)
   }
 
   private final class Impl[A](val config: Config, val cell: Cell[A], val component: Component) extends AutoView[A] {

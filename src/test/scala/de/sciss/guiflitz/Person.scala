@@ -1,5 +1,7 @@
 package de.sciss.guiflitz
 
+import collection.immutable.{IndexedSeq => Vec}
+
 object Gender {
   case object Male   extends Gender
   case object Female extends Gender
@@ -14,10 +16,12 @@ object Person {
   val Example = Person(name = "Nam June", age = 80, flux = true, num = 3.1415, gender = Gender.Other("schoko"),
                        spouse =
                           Person("Shigeko", age = 75, flux = true, num = 1.234, gender = Gender.Female,
-                            spouse = NoPerson)
+                            spouse = NoPerson, tags = Vec("Video", "Performance")),
+                       tags = Vec("Video")
                       )
 }
-case class Person(name: String, age: Int, flux: Boolean, num: Double, gender: Gender, spouse: MaybePerson)
+case class Person(name: String, age: Int, flux: Boolean, num: Double, gender: Gender, spouse: MaybePerson,
+                  tags: Vec[String])
   extends MaybePerson
 
 object Test {

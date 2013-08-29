@@ -12,7 +12,7 @@ object Demo extends SimpleSwingApplication {
   val nimbusOption = if (!useNimbus) None else UIManager.getInstalledLookAndFeels.collectFirst {
     case info if info.getName == "Nimbus" => info.getClassName
   }
-  nimbusOption.foreach(UIManager.setLookAndFeel _)
+  nimbusOption.foreach(UIManager.setLookAndFeel)
 
   lazy val view = {
     val c = AutoView.Config()
