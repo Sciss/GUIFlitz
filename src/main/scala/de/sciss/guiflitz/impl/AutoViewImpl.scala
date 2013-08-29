@@ -28,7 +28,7 @@ package impl
 
 import reflect.runtime.{universe => ru, currentMirror => cm}
 import ru.{Type, TypeTag}
-import javax.swing.{JToolBar, JSeparator, JComponent, Spring, SpinnerNumberModel}
+import javax.swing.{SpringLayout, JToolBar, JSeparator, JComponent, Spring, SpinnerNumberModel}
 import de.sciss.swingplus.Spinner
 import de.sciss.swingplus.Implicits._
 import scala.swing.event.{SelectionChanged, ButtonClicked, ValueChanged}
@@ -141,11 +141,14 @@ private[guiflitz] object AutoViewImpl {
     def mkChild(idx: Int, elem: Any): Child = {
       if (idx > 0) {
         val sep        = Component.wrap(new JSeparator())
-        sep.border     = EmptyBorder(top = 2, left = 0, bottom = 2, right = 0)
+        // sep.border     = EmptyBorder(top = 2, left = 0, bottom = 2, right = 0)
         pane.contents += sep
       }
       val (childCell, childComp) = mkView(init = elem, shape = childShape, config = config, nested = false)
-      pane.contents += childComp
+      pane.contents += (childComp.peer.getLayout match {
+        case _: SpringLayout  => new FlowPanel(childComp)  // XXX TODO: bug with spring layout
+        case _                => childComp
+      })
 
       lazy val lChild: Cell.Listener[Any] = {
         case newElem =>
