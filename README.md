@@ -10,13 +10,13 @@ This project is in early stage and not yet fully functional.
 
 ## requirements / installation
 
-This project currently compiles against Scala 2.10 using sbt 0.12.
+This project currently compiles against Scala 2.10 using sbt 0.13.
 
 To use the library in your project:
 
     "de.sciss" %% "guiflitz" % v
 
-The current version `v` is `"0.0.+"`
+The current version `v` is `"0.1.+"`
 
 ## example
 
