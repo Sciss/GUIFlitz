@@ -35,12 +35,11 @@ object Cell {
     override def toString = s"Cell(${this()})"
 
     def apply(): A = _value
-    def update(value: A) {
+    def update(value: A): Unit =
       if (_value != value) {
         _value = value
         dispatch(value)
       }
-    }
   }
 
   type Listener[A] = Model.Listener[A]

@@ -52,7 +52,7 @@ object AutoView {
 
     def build: Config = Config(small = small, scroll = scroll)
 
-    def read(c: Config) {
+    def read(c: Config): Unit = {
       small   = c.small
       scroll  = c.scroll
     }

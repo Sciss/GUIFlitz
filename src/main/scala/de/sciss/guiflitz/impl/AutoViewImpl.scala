@@ -45,9 +45,8 @@ private[guiflitz] object AutoViewImpl {
 
   private type Tuple = (Model[Any], Component)
 
-  private def log(what: => String) {
+  private def log(what: => String): Unit =
     if (AutoView.showLog) println(s"<auto-view> $what")
-  }
 
   def apply[A: TypeTag](init: A, config: Config): AutoView[A] = {
     val shape         = Shape[A]
@@ -64,9 +63,9 @@ private[guiflitz] object AutoViewImpl {
     new Impl(config, cellC, compS)
   }
 
-  @inline private def mkSmall(comp: Component, config: Config) {
+  @inline private def mkSmall(comp: Component, config: Config): Unit =
     if (config.small) {
-      def apply(c: JComponent) {
+      def apply(c: JComponent): Unit = {
         c.putClientProperty("JComponent.sizeVariant", "small")
         c.getComponents.foreach {
           case jc: JComponent => apply(jc)
@@ -75,7 +74,6 @@ private[guiflitz] object AutoViewImpl {
       }
       apply(comp.peer)
     }
-  }
 
   private def mkView(init: Any, shape: Shape, config: Config, nested: Boolean): Tuple = {
     val res: Tuple = (init, shape) match {
@@ -245,7 +243,7 @@ private[guiflitz] object AutoViewImpl {
         cell.addListener(l)
     }
 
-    def updateGUI(idx: Int) {
+    def updateGUI(idx: Int): Unit = {
       log(s"updateGUI($idx)")
       var dirty = false
       ggVar.foreach { case (oldCell, oldComp) =>
@@ -277,16 +275,15 @@ private[guiflitz] object AutoViewImpl {
       }
     }
 
-    lazy val l: Cell.Listener[Any] = {
-      case value =>
-        val valTpe = v.find(value)
-        val valIdx = valTpe.map(t => v.sub.indexOf(t)).getOrElse(-1)
-        if (valIdx >= 0) {
-          combo.reactions -= gl
-          combo.selection.index = valIdx
-          combo.reactions += gl
-          updateGUI(valIdx)
-        }
+    lazy val l: Cell.Listener[Any] = { case value =>
+      val valTpe = v.find(value)
+      val valIdx = valTpe.map(t => v.sub.indexOf(t)).getOrElse(-1)
+      if (valIdx >= 0) {
+        combo.reactions -= gl
+        combo.selection.index = valIdx
+        combo.reactions += gl
+        updateGUI(valIdx)
+      }
     }
 
     lazy val gl: PartialFunction[Any, Unit] = {

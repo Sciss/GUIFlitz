@@ -73,8 +73,8 @@ object SpringPanel {
 
     private var _value = Spring.UNSET
 
-    def getValue: Int = if (_value != Spring.UNSET) _value else getPreferredValue
-    def setValue(value: Int) { _value = value }
+    def getValue      : Int         = if (_value != Spring.UNSET) _value else getPreferredValue
+    def setValue(value: Int): Unit  = _value = value
   }
 }
 class SpringPanel extends Panel with SequentialContainer.Wrapper { me =>
@@ -88,7 +88,7 @@ class SpringPanel extends Panel with SequentialContainer.Wrapper { me =>
   /** Retrieves the layout constraints of a component. */
   def cons(component: Component): SpringLayout.Constraints = lay.getConstraints(component.peer)
 
-  private def pairWiseDo(xs: Seq[Component])(fun: (Component, Component) => Unit) {
+  private def pairWiseDo(xs: Seq[Component])(fun: (Component, Component) => Unit): Unit = {
     val it = xs.iterator
     if (it.isEmpty) return
     var succ = it.next()
@@ -99,10 +99,10 @@ class SpringPanel extends Panel with SequentialContainer.Wrapper { me =>
     }
   }
 
-  def hseq(xs: Component*) { hseq(Related)(xs: _*) }
+  def hseq(xs: Component*): Unit = hseq(Related)(xs: _*)
 
   /** Arranges components in horizontal succession. */
-  def hseq(pad: Gap)(xs: Component*) {
+  def hseq(pad: Gap)(xs: Component*): Unit =
     pairWiseDo(xs) { (pred, succ) =>
       val pads = pad match {
         case w: Gap.Wrap => w.spring
@@ -110,12 +110,11 @@ class SpringPanel extends Panel with SequentialContainer.Wrapper { me =>
       }
       cons(succ).left = cons(pred).right + pads
     }
-  }
 
-  def vseq(xs: Component*) { vseq(Related)(xs: _*) }
+  def vseq(xs: Component*): Unit = vseq(Related)(xs: _*)
 
   /** Arranges components in vertical succession. */
-  def vseq(pad: Gap)(xs: Component*) {
+  def vseq(pad: Gap)(xs: Component*): Unit =
     pairWiseDo(xs) { (pred, succ) =>
       val pads = pad match {
         case w: Gap.Wrap => w.spring
@@ -123,13 +122,12 @@ class SpringPanel extends Panel with SequentialContainer.Wrapper { me =>
       }
       cons(succ).top = cons(pred).bottom + pads
     }
-  }
 
   /** Left aligns components horizontally. */
-  def halign(xs: Component*) { halign(Left)(xs: _*) }
+  def halign(xs: Component*): Unit = halign(Left)(xs: _*)
 
   /** Aligns components horizontally. */
-  def halign(value: HorizontalAlignment)(xs: Component *) {
+  def halign(value: HorizontalAlignment)(xs: Component *): Unit = {
     val fun: (Component, Component) => Unit = value match {
       case Left      => (pred, succ) => cons(succ).left      = cons(pred).left
       case Center    => (pred, succ) => cons(succ).centerX   = cons(pred).centerX
@@ -142,10 +140,10 @@ class SpringPanel extends Panel with SequentialContainer.Wrapper { me =>
   }
 
   /** Aligns components vertically to their baselines. */
-  def valign(xs: Component*) { valign(Baseline)(xs: _*) }
+  def valign(xs: Component*): Unit = valign(Baseline)(xs: _*)
 
   /** Aligns components vertically. */
-  def valign(value: VerticalAlignment)(xs: Component *) {
+  def valign(value: VerticalAlignment)(xs: Component *): Unit = {
     val fun: (Component, Component) => Unit = value match {
       case Top      => (pred, succ) => cons(succ).top       = cons(pred).top
       case Center   => (pred, succ) => cons(succ).centerY   = cons(pred).centerY
@@ -155,20 +153,18 @@ class SpringPanel extends Panel with SequentialContainer.Wrapper { me =>
     pairWiseDo(xs)(fun)
   }
 
-  def linkWidth(xs: Component*) {
+  def linkWidth(xs: Component*): Unit = {
     val w = ((0: Spring) /: xs)(_ max cons(_).width)
     xs.foreach(cons(_).width = w)
   }
 
-  def linkHeight(xs: Component*) {
+  def linkHeight(xs: Component*): Unit = {
     val h = ((0: Spring) /: xs)(_ max cons(_).height)
     xs.foreach(cons(_).height = h)
   }
 
-  def linkSize(xs: Component*) {
+  def linkSize(xs: Component*): Unit = {
     linkWidth (xs: _*)
     linkHeight(xs: _*)
   }
-
-
 }

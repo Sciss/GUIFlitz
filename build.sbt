@@ -1,25 +1,23 @@
-name := "GUIFlitz"
+name          := "GUIFlitz"
 
-version := "0.1.0"
+version       := "0.1.1-SNAPSHOT"
 
-organization := "de.sciss"
+organization  := "de.sciss"
 
-scalaVersion := "2.10.2"
+scalaVersion  := "2.10.2"
 
-description := "Automatic GUI from case classes for rapid prototyping"
+description   := "Automatic GUI from case classes for rapid prototyping"
 
-homepage <<= name { n => Some(url("https://github.com/Sciss/" + n)) }
+homepage      := Some(url("https://github.com/Sciss/" + name.value))
 
-licenses := Seq("GPL v2+" -> url("http://www.gnu.org/licenses/gpl-2.0.txt"))
+licenses      := Seq("GPL v2+" -> url("http://www.gnu.org/licenses/gpl-2.0.txt"))
 
 initialCommands in console := 
   """import de.sciss.swingplus._
     |import scala.swing._
     |import de.sciss.guiflitz._""".stripMargin
 
-libraryDependencies <+= scalaVersion { sv =>
-  "org.scala-lang" % "scala-reflect" % sv
-}
+libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 libraryDependencies ++= Seq(
   "de.sciss" %% "swingplus" % "0.0.+",
@@ -34,19 +32,18 @@ scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature")
 
 publishMavenStyle := true
 
-publishTo <<= version { v =>
-  Some(if (v endsWith "-SNAPSHOT")
+publishTo :=
+  Some(if (version.value endsWith "-SNAPSHOT")
     "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
   else
     "Sonatype Releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
   )
-}
 
 publishArtifact in Test := false
 
 pomIncludeRepository := { _ => false }
 
-pomExtra <<= name { n =>
+pomExtra := { val n = name.value
 <scm>
   <url>git@github.com:Sciss/{n}.git</url>
   <connection>scm:git:git@github.com:Sciss/{n}.git</connection>
@@ -64,9 +61,9 @@ pomExtra <<= name { n =>
 
 seq(lsSettings :_*)
 
-(LsKeys.tags in LsKeys.lsync) := Seq("swing", "gui")
+(LsKeys.tags   in LsKeys.lsync) := Seq("swing", "gui")
 
 (LsKeys.ghUser in LsKeys.lsync) := Some("Sciss")
 
-(LsKeys.ghRepo in LsKeys.lsync) <<= name(Some(_))
+(LsKeys.ghRepo in LsKeys.lsync) := Some(name.value)
 
