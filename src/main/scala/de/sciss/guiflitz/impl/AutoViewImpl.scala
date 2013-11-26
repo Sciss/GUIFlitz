@@ -490,6 +490,7 @@ private[guiflitz] object AutoViewImpl {
         c.repaint()
       } else c.getParent match {
         case p: JComponent => loopNew(p)
+        case _ =>
       }
 
     loopNew(comp.peer)
