@@ -37,6 +37,7 @@ import scala.swing.{BorderPanel, Button, ScrollPane, FlowPanel, Alignment, Label
 import language.existentials
 import de.sciss.model.Model
 import Swing._
+import scala.annotation.tailrec
 
 private[guiflitz] object AutoViewImpl {
   private final val PROP_TOP = "de.sciss.guiflitz.top"
@@ -107,6 +108,7 @@ private[guiflitz] object AutoViewImpl {
 
     lazy val lVec: Cell.Listener[Vec[Any]] = {
       case newVec =>
+        // println(s"vec update")
         val trunc = math.max(0, children.size - newVec.size)
         val inc   = math.max(0, newVec.size - children.size)
 
@@ -371,9 +373,14 @@ private[guiflitz] object AutoViewImpl {
 
       private var _value = Spring.UNSET
 
-      def getMinimumValue  : Int = reduce(_.minimumSize  .width)
-      def getPreferredValue: Int = reduce(_.preferredSize.width)
-      def getMaximumValue  : Int = reduce(_.maximumSize  .width)
+      //      def getMinimumValue  : Int = reduce(_.minimumSize  .width)
+      //      def getPreferredValue: Int = reduce(_.preferredSize.width)
+      //      def getMaximumValue  : Int = reduce(_.maximumSize  .width)
+
+      lazy val getMinimumValue  : Int = reduce(_.minimumSize  .width)
+      lazy val getPreferredValue: Int = reduce(_.preferredSize.width)
+      lazy val getMaximumValue  : Int = reduce(_.maximumSize  .width)
+
       def getValue         : Int = _value // if (_value == Spring.UNSET) reduce(_.value) else _value
 
       def setValue(value: Int) {
@@ -454,6 +461,7 @@ private[guiflitz] object AutoViewImpl {
   }
 
   private def revalidate(comp: Component): Unit = {
+    // XXX TODO: remove. this is here because of migration-manager (bin compat)
     /* @tailrec */ def loop(c: JComponent): Unit =
       // WTF? re-layout only works properly if we detach nested containers by putting them on successive EDT calls
       Swing.onEDT {
@@ -465,7 +473,26 @@ private[guiflitz] object AutoViewImpl {
         }
       }
 
-    loop(comp.peer)
+    //    @tailrec def loop(c: JComponent): Unit =
+    //      // Swing.onEDT
+    //      {
+    //        c.revalidate()
+    //        c.repaint()
+    //        if (c.getClientProperty(PROP_TOP) != true) c.getParent match {
+    //          case p: JComponent => loop(p)
+    //          case _ =>
+    //        }
+    //      }
+
+    @tailrec def loopNew(c: JComponent): Unit =
+      if (c.getClientProperty(PROP_TOP) == true) {
+        c.revalidate()
+        c.repaint()
+      } else c.getParent match {
+        case p: JComponent => loopNew(p)
+      }
+
+    loopNew(comp.peer)
   }
 
   private final class Impl[A](val config: Config, val cell: Cell[A], val component: Component) extends AutoView[A] {

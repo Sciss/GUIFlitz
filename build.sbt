@@ -1,6 +1,6 @@
 name          := "GUIFlitz"
 
-version       := "0.1.1-SNAPSHOT"
+version       := "0.1.1"
 
 organization  := "de.sciss"
 

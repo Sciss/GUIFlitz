@@ -29,6 +29,7 @@ import scala.swing.{SequentialContainer, Orientation, Component, Panel}
 import Springs._
 import language.implicitConversions
 import javax.swing.{SpringLayout, SwingConstants, LayoutStyle, Spring}
+import java.awt.Container
 
 object SpringPanel {
   sealed trait HorizontalAlignment
@@ -76,11 +77,25 @@ object SpringPanel {
     def getValue      : Int         = if (_value != Spring.UNSET) _value else getPreferredValue
     def setValue(value: Int): Unit  = _value = value
   }
+
+  private final val DEBUG = false
+
+  private def debug(what: => String): Unit = if (DEBUG) println(s"[spring] $what")
 }
 class SpringPanel extends Panel with SequentialContainer.Wrapper { me =>
   import SpringPanel._
 
-  private lazy val lay = new SpringLayout
+  private lazy val lay = new SpringLayout {
+    override def invalidateLayout(p: Container): Unit = {
+      debug(s"invalidateLayout(${p.hashCode().toHexString})")
+      super.invalidateLayout(p)
+    }
+
+    override def layoutContainer(p: Container): Unit = {
+      debug(s"layoutContainer(${p.hashCode().toHexString})")
+      super.layoutContainer(p)
+    }
+  }
   override lazy val peer: javax.swing.JPanel = new javax.swing.JPanel(lay) with SuperMixin
 
   // lay.getConstraint()

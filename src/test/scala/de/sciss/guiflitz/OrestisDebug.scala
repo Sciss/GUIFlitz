@@ -5,6 +5,7 @@ import scala.swing.{Swing, Button, Orientation, BoxPanel, BorderPanel, Frame, Si
 import Swing._
 import de.sciss.swingplus.CloseOperation
 import de.sciss.swingplus.Implicits._
+import javax.swing.UIManager
 
 object OrestisDebug extends SimpleSwingApplication {
   val DefaultVoices = Vec(
@@ -31,11 +32,18 @@ object OrestisDebug extends SimpleSwingApplication {
 
   /////////////////////////////////
 
+  val useNimbus = false
+
+  val nimbusOption = if (!useNimbus) None else UIManager.getInstalledLookAndFeels.collectFirst {
+    case info if info.getName == "Nimbus" => info.getClassName
+  }
+  nimbusOption.foreach(UIManager.setLookAndFeel)
+
   lazy val view = {
     val c = AutoView.Config()
     c.small = true
-    // AutoView(GenerationImpl(), c)
-    AutoView(GlobalImpl(), c)
+    AutoView(GenerationImpl(), c)
+    // AutoView(GlobalImpl(), c)
   }
 
   lazy val postBut = {
