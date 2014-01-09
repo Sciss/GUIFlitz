@@ -3,11 +3,10 @@ package impl
 
 import scala.collection.immutable.{IndexedSeq => Vec}
 import AutoView.Config
-import scala.swing.{Alignment, Label, Component, Swing}
-import javax.swing.Spring
+import scala.swing.{GridBagPanel, GridPanel, Alignment, Label, Swing}
 import scala.reflect.runtime.{universe => ru, currentMirror => cm}
 import ru.Type
-import de.sciss.swingplus.Implicits._
+// import de.sciss.swingplus.Implicits._
 
 object ProductView {
   import AutoViewImpl.{Tuple, mkView}
@@ -15,45 +14,47 @@ object ProductView {
   def apply(init: Product, tpe: Type, args: Vec[Shape.Arg], config: Config,
                         nested: Boolean): Tuple = {
     val cell    = Cell(init)
-    val comp    = new SpringPanel
+    // val comp    = new SpringPanel: Panel
+    val comp    = new GridBagPanel
+    val cons    = new comp.Constraints()
     val edge    = Swing.EtchedBorder
     comp.border = if (nested) edge else Swing.TitledBorder(edge, tpe.typeSymbol.name.toString)
-    import comp.cons
+    // import comp.cons
 
-    import Springs._
+    // import Springs._
 
-    class MaxWidthSpring(col: Int) extends Spring {
-      private def reduce(op: Component => Int): Int = {
-        comp.contents.zipWithIndex.foldLeft(0) { case (res, (c, idx)) =>
-          if (idx % 2 == col) math.max(res, op(c)) else res
-        }
-      }
+    //    class MaxWidthSpring(col: Int) extends Spring {
+    //      private def reduce(op: Component => Int): Int = {
+    //        comp.contents.zipWithIndex.foldLeft(0) { case (res, (c, idx)) =>
+    //          if (idx % 2 == col) math.max(res, op(c)) else res
+    //        }
+    //      }
+    //
+    //      private var _value = Spring.UNSET
+    //
+    //      //      def getMinimumValue  : Int = reduce(_.minimumSize  .width)
+    //      //      def getPreferredValue: Int = reduce(_.preferredSize.width)
+    //      //      def getMaximumValue  : Int = reduce(_.maximumSize  .width)
+    //
+    //      lazy val getMinimumValue  : Int = reduce(_.minimumSize  .width)
+    //      lazy val getPreferredValue: Int = reduce(_.preferredSize.width)
+    //      lazy val getMaximumValue  : Int = reduce(_.maximumSize  .width)
+    //
+    //      def getValue         : Int = _value // if (_value == Spring.UNSET) reduce(_.value) else _value
+    //
+    //      def setValue(value: Int) {
+    //        if (_value != value) {
+    //          _value = value
+    //          // comp.contents.foreach(c => cons(c).width.value = value)
+    //        }
+    //      }
+    //    }
 
-      private var _value = Spring.UNSET
-
-      //      def getMinimumValue  : Int = reduce(_.minimumSize  .width)
-      //      def getPreferredValue: Int = reduce(_.preferredSize.width)
-      //      def getMaximumValue  : Int = reduce(_.maximumSize  .width)
-
-      lazy val getMinimumValue  : Int = reduce(_.minimumSize  .width)
-      lazy val getPreferredValue: Int = reduce(_.preferredSize.width)
-      lazy val getMaximumValue  : Int = reduce(_.maximumSize  .width)
-
-      def getValue         : Int = _value // if (_value == Spring.UNSET) reduce(_.value) else _value
-
-      def setValue(value: Int) {
-        if (_value != value) {
-          _value = value
-          // comp.contents.foreach(c => cons(c).width.value = value)
-        }
-      }
-    }
-
-    // dynamic max spring
-    val lbLeftSpring  = 4: Spring
-    val lbWidthSpring = new MaxWidthSpring(0)
-    val ggLeftSpring  = lbLeftSpring + lbWidthSpring + 4
-    val ggWidthSpring = new MaxWidthSpring(1)
+    //    // dynamic max spring
+    //    val lbLeftSpring  = 4: Spring
+    //    val lbWidthSpring = new MaxWidthSpring(0)
+    //    val ggLeftSpring  = lbLeftSpring + lbWidthSpring + 4
+    //    val ggWidthSpring = new MaxWidthSpring(1)
 
     def invokeGetter(idx: Int): Any = {
       val mGetter     = tpe.member(ru.newTermName(s"copy$$default$$${idx+1}")).asMethod
@@ -69,7 +70,7 @@ object ProductView {
       res.asInstanceOf[Product]
     }
 
-    var bottomSpring = 0: Spring
+    //    var bottomSpring = 0: Spring
 
     args.zipWithIndex.foreach { case (arg, idx) =>
       val lb = new Label(s"${arg.name.capitalize}:", null, Alignment.Trailing)
@@ -93,28 +94,37 @@ object ProductView {
       cell.addListener(l1)
 
       val gg = avComp
-      comp.contents  += lb
-      comp.contents  += gg
-      val clb         = cons(lb)
-      val cgg         = cons(gg)
-      clb.left        = lbLeftSpring
-      val topSpring   = bottomSpring + 4
-      clb.top         = topSpring
-      clb.width       = lbWidthSpring
-      cgg.left        = ggLeftSpring
-      cgg.top         = topSpring
-      if (gg.baseline >= 0) {
-        clb.baseline  = cgg.baseline
-      } else {
-        clb.height    = cgg.height
-      }
 
-      bottomSpring    = clb.bottom max cgg.bottom
+      cons.gridx  = 0
+      cons.gridy  = idx
+      cons.fill   = GridBagPanel.Fill.None
+      comp.layout(lb) = cons
+      cons.gridx  = 1
+      cons.fill   = GridBagPanel.Fill.Both
+      comp.layout(gg) = cons
+
+      //      comp.contents  += lb
+      //      comp.contents  += gg
+      //      val clb         = cons(lb)
+      //      val cgg         = cons(gg)
+      //      clb.left        = lbLeftSpring
+      //      val topSpring   = bottomSpring + 4
+      //      clb.top         = topSpring
+      //      clb.width       = lbWidthSpring
+      //      cgg.left        = ggLeftSpring
+      //      cgg.top         = topSpring
+      //      if (gg.baseline >= 0) {
+      //        clb.baseline  = cgg.baseline
+      //      } else {
+      //        clb.height    = cgg.height
+      //      }
+
+      //      bottomSpring    = clb.bottom max cgg.bottom
     }
 
-    val ccomp = cons(comp)
-    ccomp.right   = ggLeftSpring + ggWidthSpring + Spring.constant(4, 4, Int.MaxValue)
-    ccomp.bottom  = bottomSpring + Spring.constant(4, 4, Int.MaxValue)
+    //    val ccomp = cons(comp)
+    //    ccomp.right   = ggLeftSpring + ggWidthSpring + Spring.constant(4, 4, Int.MaxValue)
+    //    ccomp.bottom  = bottomSpring + Spring.constant(4, 4, Int.MaxValue)
 
     (cell, comp)
   }
