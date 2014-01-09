@@ -190,28 +190,16 @@ private[guiflitz] object AutoViewImpl {
   // --------------------------------------------------------------------
 
   private[impl] def revalidate(comp: Component): Unit = {
-    // XXX TODO: remove. this is here because of migration-manager (bin compat)
-    /* @tailrec */ def loop(c: JComponent): Unit =
-      // WTF? re-layout only works properly if we detach nested containers by putting them on successive EDT calls
-      Swing.onEDT {
-        c.revalidate()
-        c.repaint()
-        if (c.getClientProperty(PROP_TOP) != true) c.getParent match {
-          case p: JComponent => loop(p)
-          case _ =>
-        }
-      }
-
-    @tailrec def loopNew(c: JComponent): Unit =
+    @tailrec def loop(c: JComponent): Unit =
       if (c.getClientProperty(PROP_TOP) == true) {
         c.revalidate()
         c.repaint()
       } else c.getParent match {
-        case p: JComponent => loopNew(p)
+        case p: JComponent => loop(p)
         case _ =>
       }
 
-    loopNew(comp.peer)
+    loop(comp.peer)
   }
 
   private final class Impl[A](val config: Config, val cell: Cell[A], val component: Component) extends AutoView[A] {
