@@ -6,7 +6,7 @@ GUIFlitz provides automatic graphical user interface representations based on ca
 
 ## note
 
-This project is in early stage and not yet fully functional.
+This project is in early stage!
 
 ## requirements / installation
 
@@ -22,9 +22,16 @@ The current version `v` is `"0.1.1+"`
 
 An example application is provided by means of `sbt test:run`. The source class is `Demo`.
 
-## limitations
+## supported types
 
-- currently supported types: `Int`, `Double`, `Boolean`, `String`, case classes and singleton objects
-- does not work yet with type parameters, e.g. `case class Foo(opt: Option[Int])` fails because of `Option` taking a type parameter.
-- `IndexedSeq` view not yet implemented
+- primitives: `Int`, `Double`, `Boolean`, `String`, `Unit`
+- sealed traits with known direct subclasses, given that each subclass is supported
+- case classes, given that each constructor parameter's type is supported
+- singleton objects
+- `immutable.IndexedSeq[A]`, given that type `A` is supported
+- `Option[A]`, given that type `A` is supported
+
+## limitations, known issues
+
+- does not work yet with type parameters, e.g. `case class Foo(opt: Either[Int, String])` fails because of `Either` taking type parameters.
 - titled border doesn't respect `small` config (should adjust font)

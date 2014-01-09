@@ -51,8 +51,11 @@ object Shape {
     val tpe = typeOf[Unit]
     def instantiate() = ()
   }
-  case class Vector (tpe: Type, elem: Shape)     extends Shape {
+  case class Vector(tpe: Type, elem: Shape) extends Shape {
     def instantiate() = Vec.empty
+  }
+  case class Option(tpe: Type, elem: Shape) extends Shape {
+    def instantiate() = None
   }
   case class Product(tpe: Type, args: Vec[Arg])  extends Shape {
     def instantiate(): Any = {
@@ -71,7 +74,7 @@ object Shape {
     *             breaker point for self referential structures.
     */
   case class Variant(tpe: Type, sub: Vec[Type]) extends Shape {
-    def find(obj: Any): Option[Type] = {
+    def find(obj: Any): scala.Option[Type] = {
       val objType = cm.classSymbol(obj.getClass).toType
       require  (objType <:< this.tpe)
       sub find (objType <:< _       )
@@ -79,7 +82,7 @@ object Shape {
 
     def instantiate() = Shape.fromType(sub.head).instantiate()
   }
-  case class Other  (tpe: Type)                  extends Shape {
+  case class Other(tpe: Type) extends Shape {
     def instantiate(): Any = {
       val clazz = tpe.typeSymbol.asClass
       if (clazz.isModuleClass) {
@@ -107,6 +110,9 @@ object Shape {
     (im, ts, mApply)
   }
 
+  // cf. stackoverflow nr. 12842729
+  @inline private def firstTypeParameter(t: Type): Type =t.asInstanceOf[ru.TypeRefApi].args.head
+
   def fromType(tpe: Type): Shape = {
     tpe match {
       case t if t <:< typeOf[Int    ] => Shape.Int
@@ -119,13 +125,18 @@ object Shape {
       //        val sa  = fromType(ta)
       //        Shape.Option(tpe, sa)
 
-      case t if t <:< typeOf[Vec[Any]]    =>
-        // cf. stackoverflow nr. 12842729
-        val ta  = t.asInstanceOf[ru.TypeRefApi].args.head
+      case t if t <:< typeOf[Vec[Any]] =>
+        val ta  = firstTypeParameter(t)
         val sa  = fromType(ta)
         Shape.Vector(tpe, sa)
 
-      case _ =>
+      case t if t <:< typeOf[scala.Option[Any]] =>
+        val ta  = firstTypeParameter(t)
+        val sa  = fromType(ta)
+        Shape.Option(tpe, sa)
+
+      case _ => // try to resolve as a Product (case class) or singleton
+
         val tsym  = tpe.typeSymbol
         // println(s"Type symbol $tsym; isClass? ${tsym.isClass}")
         val clazz = tsym.asClass
@@ -169,7 +180,7 @@ object Shape {
     }
   }
 
-  case class Arg(name: String, shape: Shape, default: Option[Any])
+  case class Arg(name: String, shape: Shape, default: scala.Option[Any])
 }
 sealed trait Shape {
   def tpe: Type

@@ -44,9 +44,9 @@ private[guiflitz] object AutoViewImpl {
 
   import AutoView.Config
 
-  private type Tuple = (Model[Any], Component)
+  private[impl] type Tuple = (Model[Any], Component)
 
-  private def log(what: => String): Unit =
+  private[impl] def log(what: => String): Unit =
     if (AutoView.showLog) println(s"<auto-view> $what")
 
   def apply[A: TypeTag](init: A, config: Config): AutoView[A] = {
@@ -76,16 +76,17 @@ private[guiflitz] object AutoViewImpl {
       apply(comp.peer)
     }
 
-  private def mkView(init: Any, shape: Shape, config: Config, nested: Boolean): Tuple = {
+  private[impl] def mkView(init: Any, shape: Shape, config: Config, nested: Boolean): Tuple = {
     val res: Tuple = (init, shape) match {
-      case (i: Int    , Shape.Int               )  => mkIntSpinner   (i)
-      case (d: Double , Shape.Double            )  => mkDoubleSpinner(d)
-      case (s: String , Shape.String            )  => mkTextField    (s)
-      case (b: Boolean, Shape.Boolean           )  => mkCheckBox     (b)
-      case (_         , Shape.Unit              )  => mkDummy        ()
-      case (p: Product, Shape.Product(tpe, args))  => mkProduct      (p, tpe, args, config, nested = nested)
-      case (_         , v @ Shape.Variant(_, _ ))  => mkVariant      (init, v, config)
-      case (v: Vec[_] , Shape.Vector(_, cs)     )  => mkVector       (v, cs, config)
+      case (i: Int      , Shape.Int               )  => mkIntSpinner   (i)
+      case (d: Double   , Shape.Double            )  => mkDoubleSpinner(d)
+      case (s: String   , Shape.String            )  => mkTextField    (s)
+      case (b: Boolean  , Shape.Boolean           )  => mkCheckBox     (b)
+      case (_           , Shape.Unit              )  => mkDummy        ()
+      case (p: Product  , Shape.Product(tpe, args))  => mkProduct      (p, tpe, args, config, nested = nested)
+      case (_           , v @ Shape.Variant(_, _ ))  => mkVariant      (init, v, config)
+      case (v: Vec[_]   , Shape.Vector(_, cs)     )  => mkVector       (v, cs, config)
+      case (o: Option[_], Shape.Option(_, cs)     )  => mkOption       (o, cs, config)
       // case (_,          Shape.Other(tpe)        )  => mkLabel(tpe)
       case _ => throw new IllegalArgumentException(s"Shape $shape has no supported view")
     }
@@ -98,6 +99,8 @@ private[guiflitz] object AutoViewImpl {
     val comp  = Swing.HStrut(0)
     (cell, comp)
   }
+
+  // ---------------------------------- Vector ----------------------------------
 
   private def mkVector(init: Vec[Any], childShape: Shape, config: Config): Tuple = {
     type Child      = (Cell[Any], Cell.Listener[Any])
@@ -190,6 +193,8 @@ private[guiflitz] object AutoViewImpl {
     (cell, comp)
   }
 
+  // ---------------------------------- Int / Double Spinner ----------------------------------
+
   private def mkIntSpinner(init: Int): Tuple =
     mkSpinner[Int   ](new SpinnerNumberModel(init, Int   .MinValue, Int   .MaxValue, 1))(_.intValue   ())
 
@@ -220,101 +225,16 @@ private[guiflitz] object AutoViewImpl {
     (cell, comp)
   }
 
-  private def mkVariant(init: Any, v: Shape.Variant, config: Config): Tuple = {
-    val cell  = Cell(init)
-    var ggVar = Option.empty[Tuple]
-    val items = v.sub.map(_.typeSymbol.name.toString)
+  // ---------------------------------- Variant ----------------------------------
 
-    lazy val comp: BoxPanel = new BoxPanel(Orientation.Vertical) {
-      override lazy val peer = {
-        val p = new javax.swing.JPanel with SuperMixin {
-          // XXX TODO: this should allow us to align the outer label properly
-          // so that it always appears next to the combo box. Unfortunately, that doesn't work.
-          override def getBaseline(width: Int, height: Int) = combo.peer.getBaseline(width, height)
-        }
-        val l = new javax.swing.BoxLayout(p, Orientation.Vertical.id)
-        p.setLayout(l)
-        p
-      }
-    }
+  private def mkVariant(init: Any, v: Shape.Variant, config: Config): Tuple = new VariantView(init, v, config).tuple
 
-    lazy val subL: Cell.Listener[Any] = {
-      case subV =>
-        cell.removeListener(l)
-        cell() = subV
-        cell.addListener(l)
-    }
+  // ---------------------------------- Option ----------------------------------
 
-    def updateGUI(idx: Int): Unit = {
-      log(s"updateGUI($idx)")
-      var dirty = false
-      ggVar.foreach { case (oldCell, oldComp) =>
-        log("remove old sub view")
-        oldCell.removeListener(subL)
-        ggVar = None
-        if (comp.contents.size == 3) {
-          comp.contents.remove(1, 2)
-          dirty = true
-        }
-      }
-      Shape.fromType(v.sub(idx)) match {
-        case Shape.Other(_) =>  // no additinal view
-          log("new value has no view")
-        case shp =>
-          log("adding new sub view")
-          val newView @ (newCell, newComp) = mkView(cell(), shp, config, nested = true)
-          newCell.addListener(subL)
-          comp.contents += Swing.VStrut(4)
-          // there is a problem with directly adding an AutoView[Product] component
-          // (i.e. SpringPanel) -- for whatever reason, if we put that into another
-          // container, such as FlowPanel, we avoid layout garbage.
-          comp.contents += new FlowPanel(newComp)  // Button("Hallo") {}
-          ggVar = Some(newView)
-          dirty = true
-      }
-      if (dirty) {
-        revalidate(comp)
-      }
-    }
+  private def mkOption(init: Option[Any], childShape: Shape, config: Config): Tuple =
+    new OptionView(init, childShape, config).tuple
 
-    lazy val l: Cell.Listener[Any] = { case value =>
-      val valTpe = v.find(value)
-      val valIdx = valTpe.map(t => v.sub.indexOf(t)).getOrElse(-1)
-      if (valIdx >= 0) {
-        combo.reactions -= gl
-        combo.selection.index = valIdx
-        combo.reactions += gl
-        updateGUI(valIdx)
-      }
-    }
-
-    lazy val gl: PartialFunction[Any, Unit] = {
-      case SelectionChanged(_) =>
-        cell.removeListener(l)
-        val idx = combo.selection.index
-        if (idx >= 0) try {
-          val subShape  = Shape.fromType(v.sub(idx))
-          val subObj    = subShape.instantiate()
-          cell()        = subObj
-        } finally {
-          cell.addListener(l)
-          updateGUI(idx)
-        }
-    }
-
-    lazy val combo: ComboBox[String] = new ComboBox(items) {
-      listenTo(selection)
-      reactions += gl
-      peer.putClientProperty("JComboBox.isSquare", true)
-    }
-
-    comp.contents += combo
-
-    l(init)
-    cell.addListener(l)
-
-    (cell, comp)
-  }
+  // ---------------------------------- Text Field ----------------------------------
 
   private def mkTextField(init: String): Tuple = {
     val cell  = Cell(init)
@@ -335,6 +255,8 @@ private[guiflitz] object AutoViewImpl {
     (cell, comp)
   }
 
+  // ---------------------------------- Check Box ----------------------------------
+
   private def mkCheckBox(init: Boolean): Tuple = {
     val cell  = Cell(init)
     val comp  = new CheckBox {
@@ -353,6 +275,8 @@ private[guiflitz] object AutoViewImpl {
     }
     (cell, comp)
   }
+
+  // ---------------------------------- Product ----------------------------------
 
   private def mkProduct(init: Product, tpe: Type, args: Vec[Shape.Arg], config: Config,
                         nested: Boolean): Tuple = {
@@ -460,7 +384,9 @@ private[guiflitz] object AutoViewImpl {
     (cell, comp)
   }
 
-  private def revalidate(comp: Component): Unit = {
+  // --------------------------------------------------------------------
+
+  private[impl] def revalidate(comp: Component): Unit = {
     // XXX TODO: remove. this is here because of migration-manager (bin compat)
     /* @tailrec */ def loop(c: JComponent): Unit =
       // WTF? re-layout only works properly if we detach nested containers by putting them on successive EDT calls
@@ -500,8 +426,5 @@ private[guiflitz] object AutoViewImpl {
     override def toString = s"AutoView@${hashCode().toHexString}"
 
     def value: A = cell()
-
-    // private val lens = Lenser[A]
-    // lens.name.set(value)("hallo")
   }
 }
