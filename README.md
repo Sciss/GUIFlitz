@@ -2,11 +2,7 @@
 
 ## statement
 
-GUIFlitz provides automatic graphical user interface representations based on case classes for rapid prototyping in the Scala programming language. It is released under the [GNU General Public License](https://raw.github.com/Sciss/GUIFlitz/master/LICENSE) v2+ and comes with absolutely no warranties. To contact the author, send an email to `contact at sciss.de`.
-
-## note
-
-This project is in early stage!
+GUIFlitz provides automatic graphical user interface representations based on case classes for rapid prototyping in the Scala programming language. It is released under the [GNU Lesser General Public License](https://raw.github.com/Sciss/GUIFlitz/master/LICENSE) v3+ and comes with absolutely no warranties. To contact the author, send an email to `contact at sciss.de`.
 
 ## requirements / installation
 
@@ -16,7 +12,7 @@ To use the library in your project:
 
     "de.sciss" %% "guiflitz" % v
 
-The current version `v` is `"0.1.1+"`
+The current version `v` is `"0.2.+"`
 
 ## example
 

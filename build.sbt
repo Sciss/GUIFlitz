@@ -4,13 +4,13 @@ version       := "0.2.0-SNAPSHOT"
 
 organization  := "de.sciss"
 
-scalaVersion  := "2.10.2"
+scalaVersion  := "2.10.3"
 
 description   := "Automatic GUI from case classes for rapid prototyping"
 
 homepage      := Some(url("https://github.com/Sciss/" + name.value))
 
-licenses      := Seq("GPL v2+" -> url("http://www.gnu.org/licenses/gpl-2.0.txt"))
+licenses      := Seq("LGPL v3+" -> url("http://www.gnu.org/licenses/lgpl-3.0.txt"))
 
 initialCommands in console := 
   """import de.sciss.swingplus._
@@ -20,8 +20,8 @@ initialCommands in console :=
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 libraryDependencies ++= Seq(
-  "de.sciss" %% "swingplus" % "0.0.+",
-  "de.sciss" %% "model"     % "0.3.+"
+  "de.sciss" %% "swingplus" % "0.0.2+",
+  "de.sciss" %% "model"     % "0.3.1+"
 )
 
 retrieveManaged := true

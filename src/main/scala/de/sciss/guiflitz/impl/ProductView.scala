@@ -1,60 +1,52 @@
+/*
+ *  ProductView.scala
+ *  (GUIFlitz)
+ *
+ *  Copyright (c) 2013-2014 Hanns Holger Rutz. All rights reserved.
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 3 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  For further information, please contact Hanns Holger Rutz at
+ *  contact@sciss.de
+ */
+
 package de.sciss.guiflitz
 package impl
 
 import scala.collection.immutable.{IndexedSeq => Vec}
 import AutoView.Config
-import scala.swing.{GridBagPanel, GridPanel, Alignment, Label, Swing}
+import scala.swing.{Insets, TextField, CheckBox, ComboBox, GridBagPanel, Alignment, Label, Swing}
 import scala.reflect.runtime.{universe => ru, currentMirror => cm}
 import ru.Type
+import scala.swing.GridBagPanel.{Anchor, Fill}
+import de.sciss.swingplus.Spinner
+
 // import de.sciss.swingplus.Implicits._
 
 object ProductView {
   import AutoViewImpl.{Tuple, mkView}
 
+  private val insLabel  = new Insets(1, 8, 1, 2)
+  private val insView   = new Insets(1, 2, 1, 4)
+
   def apply(init: Product, tpe: Type, args: Vec[Shape.Arg], config: Config,
                         nested: Boolean): Tuple = {
     val cell    = Cell(init)
-    // val comp    = new SpringPanel: Panel
     val comp    = new GridBagPanel
     val cons    = new comp.Constraints()
+    // cons.ipadx  = 8
+    // cons.ipady  = 8
+    // cons.insets = new Insets(1, 2, 1, 2)
     val edge    = Swing.EtchedBorder
     comp.border = if (nested) edge else Swing.TitledBorder(edge, tpe.typeSymbol.name.toString)
-    // import comp.cons
-
-    // import Springs._
-
-    //    class MaxWidthSpring(col: Int) extends Spring {
-    //      private def reduce(op: Component => Int): Int = {
-    //        comp.contents.zipWithIndex.foldLeft(0) { case (res, (c, idx)) =>
-    //          if (idx % 2 == col) math.max(res, op(c)) else res
-    //        }
-    //      }
-    //
-    //      private var _value = Spring.UNSET
-    //
-    //      //      def getMinimumValue  : Int = reduce(_.minimumSize  .width)
-    //      //      def getPreferredValue: Int = reduce(_.preferredSize.width)
-    //      //      def getMaximumValue  : Int = reduce(_.maximumSize  .width)
-    //
-    //      lazy val getMinimumValue  : Int = reduce(_.minimumSize  .width)
-    //      lazy val getPreferredValue: Int = reduce(_.preferredSize.width)
-    //      lazy val getMaximumValue  : Int = reduce(_.maximumSize  .width)
-    //
-    //      def getValue         : Int = _value // if (_value == Spring.UNSET) reduce(_.value) else _value
-    //
-    //      def setValue(value: Int) {
-    //        if (_value != value) {
-    //          _value = value
-    //          // comp.contents.foreach(c => cons(c).width.value = value)
-    //        }
-    //      }
-    //    }
-
-    //    // dynamic max spring
-    //    val lbLeftSpring  = 4: Spring
-    //    val lbWidthSpring = new MaxWidthSpring(0)
-    //    val ggLeftSpring  = lbLeftSpring + lbWidthSpring + 4
-    //    val ggWidthSpring = new MaxWidthSpring(1)
 
     def invokeGetter(idx: Int): Any = {
       val mGetter     = tpe.member(ru.newTermName(s"copy$$default$$${idx+1}")).asMethod
@@ -69,8 +61,6 @@ object ProductView {
       val res             = m.reflectMethod(mApply)(v: _*)
       res.asInstanceOf[Product]
     }
-
-    //    var bottomSpring = 0: Spring
 
     args.zipWithIndex.foreach { case (arg, idx) =>
       val lb = new Label(s"${arg.name.capitalize}:", null, Alignment.Trailing)
@@ -97,34 +87,22 @@ object ProductView {
 
       cons.gridx  = 0
       cons.gridy  = idx
-      cons.fill   = GridBagPanel.Fill.None
+      cons.insets = insLabel
+      cons.fill   = Fill.None
+      cons.anchor = Anchor.East
       comp.layout(lb) = cons
       cons.gridx  = 1
-      cons.fill   = GridBagPanel.Fill.Both
+      cons.insets = insView
+      cons.fill   = avComp match {
+        case _: ComboBox[_] => Fill.None
+        case _: Spinner     => Fill.Horizontal
+        case _: CheckBox    => Fill.Horizontal
+        case _: TextField   => Fill.Horizontal
+        case _              => Fill.Both
+      }
+      cons.anchor = Anchor.West
       comp.layout(gg) = cons
-
-      //      comp.contents  += lb
-      //      comp.contents  += gg
-      //      val clb         = cons(lb)
-      //      val cgg         = cons(gg)
-      //      clb.left        = lbLeftSpring
-      //      val topSpring   = bottomSpring + 4
-      //      clb.top         = topSpring
-      //      clb.width       = lbWidthSpring
-      //      cgg.left        = ggLeftSpring
-      //      cgg.top         = topSpring
-      //      if (gg.baseline >= 0) {
-      //        clb.baseline  = cgg.baseline
-      //      } else {
-      //        clb.height    = cgg.height
-      //      }
-
-      //      bottomSpring    = clb.bottom max cgg.bottom
-    }
-
-    //    val ccomp = cons(comp)
-    //    ccomp.right   = ggLeftSpring + ggWidthSpring + Spring.constant(4, 4, Int.MaxValue)
-    //    ccomp.bottom  = bottomSpring + Spring.constant(4, 4, Int.MaxValue)
+   }
 
     (cell, comp)
   }
