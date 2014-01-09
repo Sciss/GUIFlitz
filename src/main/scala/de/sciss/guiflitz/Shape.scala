@@ -54,7 +54,7 @@ object Shape {
   case class Vector(tpe: Type, elem: Shape) extends Shape {
     def instantiate() = Vec.empty
   }
-  case class Option(tpe: Type, elem: Shape) extends Shape {
+  case class Option(tpe: Type, elem: Type) extends Shape {
     def instantiate() = None
   }
   case class Product(tpe: Type, args: Vec[Arg])  extends Shape {
@@ -132,8 +132,8 @@ object Shape {
 
       case t if t <:< typeOf[scala.Option[Any]] =>
         val ta  = firstTypeParameter(t)
-        val sa  = fromType(ta)
-        Shape.Option(tpe, sa)
+        // val sa  = fromType(ta)
+        Shape.Option(tpe, ta) // sa)
 
       case _ => // try to resolve as a Product (case class) or singleton
 

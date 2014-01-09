@@ -26,17 +26,15 @@
 package de.sciss.guiflitz
 package impl
 
-import reflect.runtime.{universe => ru, currentMirror => cm}
+import reflect.runtime.{universe => ru}
 import ru.{Type, TypeTag}
-import javax.swing.{SpringLayout, JToolBar, JSeparator, JComponent, Spring, SpinnerNumberModel}
+import javax.swing.{JComponent, SpinnerNumberModel}
 import de.sciss.swingplus.Spinner
-import de.sciss.swingplus.Implicits._
-import scala.swing.event.{SelectionChanged, ButtonClicked, ValueChanged}
+import scala.swing.event.{ButtonClicked, ValueChanged}
 import collection.immutable.{IndexedSeq => Vec}
-import scala.swing.{BorderPanel, Button, ScrollPane, FlowPanel, Alignment, Label, Component, Swing, CheckBox, BoxPanel, Orientation, TextField, ComboBox}
+import scala.swing.{ScrollPane, Component, Swing, CheckBox, TextField}
 import language.existentials
 import de.sciss.model.Model
-import Swing._
 import scala.annotation.tailrec
 
 private[guiflitz] object AutoViewImpl {
@@ -102,96 +100,8 @@ private[guiflitz] object AutoViewImpl {
 
   // ---------------------------------- Vector ----------------------------------
 
-  private def mkVector(init: Vec[Any], childShape: Shape, config: Config): Tuple = {
-    type Child      = (Cell[Any], Cell.Listener[Any])
-
-    val cell        = Cell(init)
-    val pane        = new BoxPanel(Orientation.Vertical)
-    var children    = Vec.empty[Child]
-
-    lazy val lVec: Cell.Listener[Vec[Any]] = {
-      case newVec =>
-        // println(s"vec update")
-        val trunc = math.max(0, children.size - newVec.size)
-        val inc   = math.max(0, newVec.size - children.size)
-
-        if (trunc > 0) {
-          val (newChildren, toDispose) = children.splitAt(newVec.size)
-          toDispose.foreach { case (childCell, lChild) => childCell.removeListener(lChild) }
-          pane.contents.trimEnd(math.min(pane.contents.size, trunc * 2))
-          children = newChildren
-        }
-
-        (children zip newVec).foreach { case ((childCell, lChild), elem) =>
-          childCell.removeListener(lChild)
-          childCell.update(elem)
-          childCell.addListener(lChild)
-        }
-
-        if (inc > 0) {
-          val off = children.size
-          newVec.takeRight(inc).zipWithIndex.foreach { case (elem, idx) =>
-            children :+= mkChild(off + idx, elem)
-          }
-        }
-
-        if (trunc > 0 || inc > 0) {
-          revalidate(pane)
-        }
-    }
-    cell.addListener(lVec)
-
-    def mkChild(idx: Int, elem: Any): Child = {
-      if (idx > 0) {
-        val sep        = Component.wrap(new JSeparator())
-        // sep.border     = EmptyBorder(top = 2, left = 0, bottom = 2, right = 0)
-        pane.contents += sep
-      }
-      val (childCell, childComp) = mkView(init = elem, shape = childShape, config = config, nested = false)
-      pane.contents += (childComp.peer.getLayout match {
-        case _: SpringLayout  => new FlowPanel(childComp)  // XXX TODO: bug with spring layout
-        case _                => childComp
-      })
-
-      lazy val lChild: Cell.Listener[Any] = {
-        case newElem =>
-          cell.removeListener(lVec)
-          cell() = cell().updated(idx, newElem)
-          cell.addListener(lVec)
-      }
-
-      childCell.addListener(lChild)
-      (childCell.asInstanceOf[Cell[Any]], lChild)
-    }
-
-    children = init.zipWithIndex.map { case (elem, idx) =>
-      mkChild(idx, elem)
-    }
-
-    val scroll  = new ScrollPane(pane)
-    val tbj     = new JToolBar
-    tbj.setFloatable(false)
-    tbj.setBorderPainted(false)
-    val tb      = Component.wrap(tbj)
-    val ggAdd   = Button("+") {
-      cell() = cell() :+ childShape.instantiate()
-    }
-    ggAdd.peer.putClientProperty("JButton.buttonType", "roundRect")
-    val ggRemove = Button("\u2212") {
-      cell() = cell().dropRight(1)
-    }
-    ggRemove.peer.putClientProperty("JButton.buttonType", "roundRect")
-    tbj.add(ggAdd   .peer)
-    tbj.add(ggRemove.peer)
-
-    val comp = new BorderPanel {
-      layoutManager.setVgap(0)
-      add(scroll, BorderPanel.Position.Center)
-      add(tb    , BorderPanel.Position.South )
-    }
-
-    (cell, comp)
-  }
+  @inline private def mkVector(init: Vec[Any], childShape: Shape, config: Config): Tuple =
+    VectorView(init, childShape, config)
 
   // ---------------------------------- Int / Double Spinner ----------------------------------
 
@@ -227,12 +137,13 @@ private[guiflitz] object AutoViewImpl {
 
   // ---------------------------------- Variant ----------------------------------
 
-  private def mkVariant(init: Any, v: Shape.Variant, config: Config): Tuple = new VariantView(init, v, config).tuple
+  @inline private def mkVariant(init: Any, v: Shape.Variant, config: Config): Tuple =
+    new VariantView(init, v, config).tuple
 
   // ---------------------------------- Option ----------------------------------
 
-  private def mkOption(init: Option[Any], childShape: Shape, config: Config): Tuple =
-    new OptionView(init, childShape, config).tuple
+  @inline private def mkOption(init: Option[Any], sub: Type, config: Config): Tuple =
+    new OptionView(init, sub, config).tuple
 
   // ---------------------------------- Text Field ----------------------------------
 
@@ -278,111 +189,8 @@ private[guiflitz] object AutoViewImpl {
 
   // ---------------------------------- Product ----------------------------------
 
-  private def mkProduct(init: Product, tpe: Type, args: Vec[Shape.Arg], config: Config,
-                        nested: Boolean): Tuple = {
-    val cell    = Cell(init)
-    val comp    = new SpringPanel
-    val edge    = Swing.EtchedBorder
-    comp.border = if (nested) edge else Swing.TitledBorder(edge, tpe.typeSymbol.name.toString)
-    import comp.cons
-
-    import Springs._
-
-    class MaxWidthSpring(col: Int) extends Spring {
-      private def reduce(op: Component => Int): Int = {
-        comp.contents.zipWithIndex.foldLeft(0) { case (res, (c, idx)) =>
-          if (idx % 2 == col) math.max(res, op(c)) else res
-        }
-      }
-
-      private var _value = Spring.UNSET
-
-      //      def getMinimumValue  : Int = reduce(_.minimumSize  .width)
-      //      def getPreferredValue: Int = reduce(_.preferredSize.width)
-      //      def getMaximumValue  : Int = reduce(_.maximumSize  .width)
-
-      lazy val getMinimumValue  : Int = reduce(_.minimumSize  .width)
-      lazy val getPreferredValue: Int = reduce(_.preferredSize.width)
-      lazy val getMaximumValue  : Int = reduce(_.maximumSize  .width)
-
-      def getValue         : Int = _value // if (_value == Spring.UNSET) reduce(_.value) else _value
-
-      def setValue(value: Int) {
-        if (_value != value) {
-          _value = value
-          // comp.contents.foreach(c => cons(c).width.value = value)
-        }
-      }
-    }
-
-    // dynamic max spring
-    val lbLeftSpring  = 4: Spring
-    val lbWidthSpring = new MaxWidthSpring(0)
-    val ggLeftSpring  = lbLeftSpring + lbWidthSpring + 4
-    val ggWidthSpring = new MaxWidthSpring(1)
-
-    def invokeGetter(idx: Int): Any = {
-      val mGetter     = tpe.member(ru.newTermName(s"copy$$default$$${idx+1}")).asMethod
-      val im          = cm.reflect(cell())
-      val mm          = im.reflectMethod(mGetter)
-      mm()
-    }
-
-    def copy(idx: Int, value: Any): Product = {
-      val v               = (0 until args.size).map(j => if (j == idx) value else invokeGetter(j))
-      val (m, _, mApply)  = Shape.getApplyMethod(tpe.typeSymbol)
-      m.reflectMethod(mApply)(v: _*).asInstanceOf[Product]
-    }
-
-    var bottomSpring = 0: Spring
-
-    args.zipWithIndex.foreach { case (arg, idx) =>
-      val lb = new Label(s"${arg.name.capitalize}:", null, Alignment.Trailing)
-      // mkSmall(lb, config)
-      val (avCell, avComp) = mkView(invokeGetter(idx), arg.shape, config, nested = true)
-
-      lazy val l2: Cell.Listener[Any] = {
-        case value =>
-          cell.removeListener(l1)
-          cell() = copy(idx, value)
-          cell.addListener(l1)
-      }
-      avCell.addListener(l2)
-
-      lazy val l1: Cell.Listener[Product] = {
-        case value =>
-          avCell.removeListener(l2)
-          avCell.asInstanceOf[Cell[Any]].update(invokeGetter(idx))  // grmpff...
-          avCell.addListener(l2)
-      }
-      cell.addListener(l1)
-
-      val gg = avComp
-      comp.contents  += lb
-      comp.contents  += gg
-      val clb         = cons(lb)
-      val cgg         = cons(gg)
-      clb.left        = lbLeftSpring
-      val topSpring   = bottomSpring + 4
-      clb.top         = topSpring
-      clb.width       = lbWidthSpring
-      cgg.left        = ggLeftSpring
-      cgg.top         = topSpring
-      if (gg.baseline >= 0) {
-        clb.baseline  = cgg.baseline
-      } else {
-        clb.height    = cgg.height
-      }
-
-      bottomSpring    = clb.bottom max cgg.bottom
-    }
-
-    val ccomp = cons(comp)
-    ccomp.right   = ggLeftSpring + ggWidthSpring + Spring.constant(4, 4, Int.MaxValue)
-    ccomp.bottom  = bottomSpring + Spring.constant(4, 4, Int.MaxValue)
-
-    (cell, comp)
-  }
+  @inline private def mkProduct(init: Product, tpe: Type, args: Vec[Shape.Arg], config: Config,
+                                nested: Boolean): Tuple = ProductView(init, tpe, args, config, nested)
 
   // --------------------------------------------------------------------
 
@@ -398,17 +206,6 @@ private[guiflitz] object AutoViewImpl {
           case _ =>
         }
       }
-
-    //    @tailrec def loop(c: JComponent): Unit =
-    //      // Swing.onEDT
-    //      {
-    //        c.revalidate()
-    //        c.repaint()
-    //        if (c.getClientProperty(PROP_TOP) != true) c.getParent match {
-    //          case p: JComponent => loop(p)
-    //          case _ =>
-    //        }
-    //      }
 
     @tailrec def loopNew(c: JComponent): Unit =
       if (c.getClientProperty(PROP_TOP) == true) {

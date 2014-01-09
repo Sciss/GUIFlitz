@@ -4,9 +4,15 @@ import de.sciss.guiflitz.{Shape, Cell}
 import scala.swing.{CheckBox, Component, ComboBox, FlowPanel, Swing, Orientation, BoxPanel}
 import scala.swing.event.{ButtonClicked, SelectionChanged}
 import de.sciss.guiflitz.AutoView.Config
+import reflect.runtime.{universe => ru}
+import ru.Type
 
 abstract class VariantLikeView(init: Any, config: Config) {
   import AutoViewImpl.{log, mkView, revalidate, Tuple}
+
+  final def tuple: Tuple = (cell, comp)
+
+  // ---- abstract ----
 
   protected def comp: Component
 
@@ -16,17 +22,19 @@ abstract class VariantLikeView(init: Any, config: Config) {
 
   protected def cellListener: Cell.Listener[Any]
 
+  protected def updateSub(value: Any): Unit
+
   protected val cell  = Cell(init)
   private var ggVar   = Option.empty[Tuple]
 
   private lazy val subL: Cell.Listener[Any] = {
     case subV =>
       cell.removeListener(cellListener)
-      cell() = subV
+      updateSub(subV)
       cell.addListener   (cellListener)
   }
 
-  final protected def updateGUI(newShape: Option[Shape]): Unit = {
+  final protected def updateGUI(newValue: Option[(Any, Shape)]): Unit = {
     log("updateGUI")
     var dirty = false
     ggVar.foreach { case (oldCell, oldComp) =>
@@ -35,12 +43,12 @@ abstract class VariantLikeView(init: Any, config: Config) {
       ggVar = None
       dirty = removeChild()
     }
-    newShape.foreach {
-      case Shape.Other(_) =>  // no additional view
+    newValue.foreach {
+      case (_, Shape.Other(_)) =>  // no additional view
         log("new value has no view")
-      case shp =>
+      case (v, shp) =>
         log("adding new sub view")
-        val newView @ (newCell, newComp) = mkView(cell(), shp, config, nested = true)
+        val newView @ (newCell, newComp) = mkView(v, shp, config, nested = true)
         newCell.addListener(subL)
         addChild(newComp)
         ggVar = Some(newView)
@@ -51,14 +59,14 @@ abstract class VariantLikeView(init: Any, config: Config) {
     }
   }
 
+  // ---- constructor ----
+
   cellListener(init)
   cell.addListener(cellListener)
-
-  final def tuple: Tuple = (cell, comp)
 }
 
 final class VariantView(init: Any, v: Shape.Variant, config: Config) extends VariantLikeView(init, config) {
-  private val items = v.sub.map(_.typeSymbol.name.toString)
+  private lazy val items = v.sub.map(_.typeSymbol.name.toString)
 
   protected lazy val comp: BoxPanel = new BoxPanel(Orientation.Vertical) {
     override lazy val peer = {
@@ -71,6 +79,7 @@ final class VariantView(init: Any, v: Shape.Variant, config: Config) extends Var
       p.setLayout(l)
       p
     }
+    contents += combo
   }
 
   protected def addChild(child: Component): Unit = {
@@ -89,15 +98,18 @@ final class VariantView(init: Any, v: Shape.Variant, config: Config) extends Var
       false
     }
 
+  protected def updateSub(value: Any): Unit = cell() = value
+
   private lazy val combo: ComboBox[String] = new ComboBox(items) {
     listenTo(selection)
     reactions += gl
     peer.putClientProperty("JComboBox.isSquare", true)
   }
 
-  private def updateGUI(idx: Int): Unit = {
+  private def updateGUI1(idx: Int): Unit = {
     val shape = Shape.fromType(v.sub(idx))
-    updateGUI(Some(shape))
+    val value = cell()
+    updateGUI(Some(value -> shape))
   }
 
   protected lazy val cellListener: Cell.Listener[Any] = { case value =>
@@ -107,7 +119,7 @@ final class VariantView(init: Any, v: Shape.Variant, config: Config) extends Var
       combo.reactions -= gl
       combo.selection.index = valIdx
       combo.reactions += gl
-      updateGUI(valIdx)
+      updateGUI1(valIdx)
     }
   }
 
@@ -121,20 +133,20 @@ final class VariantView(init: Any, v: Shape.Variant, config: Config) extends Var
         cell()        = subObj
       } finally {
         cell.addListener(cellListener)
-        updateGUI(idx)
+        updateGUI1(idx)
       }
   }
-
-  comp.contents += combo
 }
 
-final class OptionView(init: Any, childShape: Shape, config: Config) extends VariantLikeView(init, config) {
+final class OptionView(init: Any, sub: Type, config: Config) extends VariantLikeView(init, config) {
   // private val items = v.sub.map(_.typeSymbol.name.toString)
 
-  protected lazy val comp: BoxPanel = new BoxPanel(Orientation.Horizontal)
+  protected lazy val comp: BoxPanel = new BoxPanel(Orientation.Horizontal) {
+    contents += check
+  }
 
   protected def addChild(child: Component): Unit = {
-    comp.contents += Swing.VStrut(4)
+    comp.contents += Swing.HStrut(4)
     // there is a problem with directly adding an AutoView[Product] component
     // (i.e. SpringPanel) -- for whatever reason, if we put that into another
     // container, such as FlowPanel, we avoid layout garbage.
@@ -149,6 +161,8 @@ final class OptionView(init: Any, childShape: Shape, config: Config) extends Var
       false
     }
 
+  protected def updateSub(value: Any): Unit = cell() = Some(value)
+
   private lazy val check: CheckBox = new CheckBox {
     listenTo(this)
     reactions += gl
@@ -159,20 +173,31 @@ final class OptionView(init: Any, childShape: Shape, config: Config) extends Var
     check.reactions -= gl
     check.selected   = selected
     check.reactions += gl
-    updateGUI(if (selected) Some(childShape) else None)
+    // val subShape     = Shape.fromType(sub)
+    // updateGUI(if (selected) Some(subShape) else None)
+    updateGUI1(value)
+  }
+
+  private def updateGUI1(value: Option[Any]): Unit = {
+    val tup = value.map(_ -> Shape.fromType(sub))
+    updateGUI(tup)
   }
 
   private lazy val gl: PartialFunction[Any, Unit] = {
     case ButtonClicked(_) =>
       cell.removeListener(cellListener)
-      if (check.selected) try {
-        val subObj    = childShape.instantiate()
-        cell()        = subObj
+      var value = Option.empty[Any]
+      try {
+        value = if (check.selected) {
+          val subShape = Shape.fromType(sub)
+          Some(subShape.instantiate())
+        } else {
+          None
+        }
+        cell() = value
       } finally {
         cell.addListener(cellListener)
-        updateGUI(None)
+        updateGUI1(value)
       }
   }
-
-  comp.contents += check
 }
