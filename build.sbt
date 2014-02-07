@@ -1,6 +1,6 @@
 name          := "GUIFlitz"
 
-version       := "0.2.0"
+version       := "0.3.0"
 
 organization  := "de.sciss"
 
@@ -20,7 +20,7 @@ initialCommands in console :=
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 libraryDependencies ++= Seq(
-  "de.sciss" %% "swingplus" % "0.0.2+",
+  "de.sciss" %% "swingplus" % "0.1.+",
   "de.sciss" %% "model"     % "0.3.1+"
 )
 
