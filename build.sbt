@@ -24,7 +24,7 @@ libraryDependencies ++= Seq(
   "de.sciss" %% "model"     % "0.3.1+"
 )
 
-retrieveManaged := true
+// retrieveManaged := true
 
 scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature")
 
