@@ -6,13 +6,13 @@ GUIFlitz provides automatic graphical user interface representations based on ca
 
 ## requirements / installation
 
-This project currently compiles against Scala 2.10 using sbt 0.13.
+This project currently compiles against Scala 2.11, 2.10 using sbt 0.13.
 
 To use the library in your project:
 
     "de.sciss" %% "guiflitz" % v
 
-The current version `v` is `"0.2.+"`
+The current version `v` is `"0.2.1+"`
 
 ## example
 

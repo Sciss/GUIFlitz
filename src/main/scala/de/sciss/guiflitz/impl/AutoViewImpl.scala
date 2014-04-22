@@ -88,7 +88,7 @@ private[guiflitz] object AutoViewImpl {
   }
 
   private def mkDummy(): Tuple = {
-    val cell  = Cell[Unit]()
+    val cell  = Cell[Unit](())
     val comp  = Swing.HStrut(0)
     (cell, comp)
   }

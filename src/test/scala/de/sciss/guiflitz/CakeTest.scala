@@ -14,7 +14,7 @@ object CakeTest extends App {
   object TestSys extends Sys {
     type Global = Unit
 
-    def mkContainer() = new Container()
+    def mkContainer() = new Container(())
   }
 
   test()

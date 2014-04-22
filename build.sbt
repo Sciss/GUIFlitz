@@ -1,16 +1,18 @@
-name          := "GUIFlitz"
+name               := "GUIFlitz"
 
-version       := "0.3.0"
+version            := "0.3.1"
 
-organization  := "de.sciss"
+organization       := "de.sciss"
 
-scalaVersion  := "2.10.3"
+scalaVersion       := "2.11.0"
 
-description   := "Automatic GUI from case classes for rapid prototyping"
+crossScalaVersions := Seq("2.11.0", "2.10.4")
 
-homepage      := Some(url("https://github.com/Sciss/" + name.value))
+description        := "Automatic GUI from case classes for rapid prototyping"
 
-licenses      := Seq("LGPL v3+" -> url("http://www.gnu.org/licenses/lgpl-3.0.txt"))
+homepage           := Some(url("https://github.com/Sciss/" + name.value))
+
+licenses           := Seq("LGPL v3+" -> url("http://www.gnu.org/licenses/lgpl-3.0.txt"))
 
 initialCommands in console := 
   """import de.sciss.swingplus._
@@ -20,13 +22,13 @@ initialCommands in console :=
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 libraryDependencies ++= Seq(
-  "de.sciss" %% "swingplus" % "0.1.+",
-  "de.sciss" %% "model"     % "0.3.1+"
+  "de.sciss" %% "swingplus" % "0.1.1",
+  "de.sciss" %% "model"     % "0.3.2"
 )
 
 // retrieveManaged := true
 
-scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature")
+scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-Xfuture")
 
 // ---- publishing ----
 

@@ -23,7 +23,7 @@ object ProjectionTest extends App {
     type Global = Unit
     val selfTag = ru.typeTag[TestSys]
 
-    def mkContainer() = Container[TestSys]()
+    def mkContainer() = Container[TestSys](())
   }
 
   test(new TestSys)
