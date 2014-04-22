@@ -1,6 +1,6 @@
 name               := "GUIFlitz"
 
-version            := "0.3.1"
+version            := "0.3.2"
 
 organization       := "de.sciss"
 
@@ -12,7 +12,7 @@ description        := "Automatic GUI from case classes for rapid prototyping"
 
 homepage           := Some(url("https://github.com/Sciss/" + name.value))
 
-licenses           := Seq("LGPL v3+" -> url("http://www.gnu.org/licenses/lgpl-3.0.txt"))
+licenses           := Seq("LGPL v2.1+" -> url("http://www.gnu.org/licenses/lgpl-2.1.txt"))
 
 initialCommands in console := 
   """import de.sciss.swingplus._
@@ -22,7 +22,7 @@ initialCommands in console :=
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 libraryDependencies ++= Seq(
-  "de.sciss" %% "swingplus" % "0.1.1",
+  "de.sciss" %% "swingplus" % "0.1.2",
   "de.sciss" %% "model"     % "0.3.2"
 )
 
