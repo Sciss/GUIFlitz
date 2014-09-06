@@ -13,7 +13,8 @@
 package de.sciss.guiflitz.impl
 
 import de.sciss.guiflitz.{Shape, Cell}
-import scala.swing.{CheckBox, Component, ComboBox, FlowPanel, Swing, Orientation, BoxPanel}
+import de.sciss.swingplus.ComboBox
+import scala.swing.{CheckBox, Component, FlowPanel, Swing, Orientation, BoxPanel}
 import scala.swing.event.{ButtonClicked, SelectionChanged}
 import de.sciss.guiflitz.AutoView.Config
 import reflect.runtime.{universe => ru}

@@ -12,7 +12,7 @@ To use the library in your project:
 
     "de.sciss" %% "guiflitz" % v
 
-The current version `v` is `"0.3.2+"`
+The current version `v` is `"0.4.0"`
 
 ## example
 

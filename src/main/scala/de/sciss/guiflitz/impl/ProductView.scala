@@ -15,11 +15,11 @@ package impl
 
 import scala.collection.immutable.{IndexedSeq => Vec}
 import AutoView.Config
-import scala.swing.{Insets, TextField, CheckBox, ComboBox, GridBagPanel, Alignment, Label, Swing}
+import scala.swing.{Insets, TextField, CheckBox, GridBagPanel, Alignment, Label, Swing}
 import scala.reflect.runtime.{universe => ru, currentMirror => cm}
 import ru.Type
 import scala.swing.GridBagPanel.{Anchor, Fill}
-import de.sciss.swingplus.Spinner
+import de.sciss.swingplus.{ComboBox, Spinner}
 
 // import de.sciss.swingplus.Implicits._
 

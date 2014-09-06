@@ -1,18 +1,25 @@
 name               := "GUIFlitz"
 
-version            := "0.3.2"
+version            := "0.4.0"
 
 organization       := "de.sciss"
 
-scalaVersion       := "2.11.0"
+scalaVersion       := "2.11.2"
 
-crossScalaVersions := Seq("2.11.0", "2.10.4")
+crossScalaVersions := Seq("2.11.2", "2.10.4")
 
 description        := "Automatic GUI from case classes for rapid prototyping"
 
 homepage           := Some(url("https://github.com/Sciss/" + name.value))
 
 licenses           := Seq("LGPL v2.1+" -> url("http://www.gnu.org/licenses/lgpl-2.1.txt"))
+
+// ---- dependencies ----
+
+lazy val swingPlusVersion = "0.2.0"
+
+lazy val modelVersion     = "0.3.2"
+
 
 initialCommands in console := 
   """import de.sciss.swingplus._
@@ -22,20 +29,20 @@ initialCommands in console :=
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 libraryDependencies ++= Seq(
-  "de.sciss" %% "swingplus" % "0.1.2",
-  "de.sciss" %% "model"     % "0.3.2"
+  "de.sciss" %% "swingplus" % swingPlusVersion,
+  "de.sciss" %% "model"     % modelVersion
 )
 
 // retrieveManaged := true
 
-scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-Xfuture")
+scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-encoding", "utf8", "-Xfuture")
 
 // ---- publishing ----
 
 publishMavenStyle := true
 
 publishTo :=
-  Some(if (version.value endsWith "-SNAPSHOT")
+  Some(if (isSnapshot.value)
     "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
   else
     "Sonatype Releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
