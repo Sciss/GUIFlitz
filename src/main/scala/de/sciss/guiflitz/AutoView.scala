@@ -48,7 +48,7 @@ object AutoView {
 
     private[guiflitz] var factoryMap = Map.empty[Type, ViewFactory[_]]
 
-    def putViewFactory[A](factory: ViewFactory[A])(implicit typeTag: TypeTag[A]): Unit =
+    def addViewFactory[A](factory: ViewFactory[A])(implicit typeTag: TypeTag[A]): Unit =
       factoryMap += typeTag.tpe -> factory
 
     def build: Config = Config(small = small, scroll = scroll, factoryMap = factoryMap)

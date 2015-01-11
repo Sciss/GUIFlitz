@@ -21,7 +21,6 @@ import scala.swing.event.{ButtonClicked, ValueChanged}
 import collection.immutable.{IndexedSeq => Vec}
 import scala.swing.{ScrollPane, Component, Swing, CheckBox, TextField}
 import language.existentials
-import de.sciss.model.Model
 import scala.annotation.tailrec
 
 private[guiflitz] object AutoViewImpl {
@@ -29,7 +28,7 @@ private[guiflitz] object AutoViewImpl {
 
   import AutoView.Config
 
-  private[impl] type Tuple = (Model[Any], Component)
+  private[impl] type Tuple = (Cell[_], Component)
 
   private[impl] def log(what: => String): Unit =
     if (AutoView.showLog) println(s"<auto-view> $what")
@@ -77,7 +76,9 @@ private[guiflitz] object AutoViewImpl {
       case (o: Option[_], Shape.Option(_, cs)     )  => mkOption       (o, cs, config)
       case (v           , Shape.Other(tpe)        )  =>
         config.factoryMap.get(shape.tpe).fold(unsupportedShape(shape)) { f =>
-          f.asInstanceOf[ViewFactory[Any]].makeView(init)
+          val cell = Cell(init)
+          val comp = f.asInstanceOf[ViewFactory[Any]].makeView(cell)
+          (cell, comp)
         }
       case _ => unsupportedShape(shape)
     }

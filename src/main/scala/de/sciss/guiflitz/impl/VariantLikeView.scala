@@ -12,16 +12,19 @@
 
 package de.sciss.guiflitz.impl
 
-import de.sciss.guiflitz.{Shape, Cell}
-import de.sciss.swingplus.ComboBox
-import scala.swing.{CheckBox, Component, FlowPanel, Swing, Orientation, BoxPanel}
-import scala.swing.event.{ButtonClicked, SelectionChanged}
 import de.sciss.guiflitz.AutoView.Config
-import reflect.runtime.{universe => ru}
+import de.sciss.guiflitz.{Cell, Shape}
+import de.sciss.swingplus.ComboBox
+
+import scala.reflect.runtime.{universe => ru}
 import ru.Type
+import scala.swing.event.{ButtonClicked, SelectionChanged}
+import scala.swing.{BoxPanel, CheckBox, Component, FlowPanel, Orientation, Swing}
+
+import scala.language.existentials
 
 abstract class VariantLikeView(init: Any, config: Config) {
-  import AutoViewImpl.{log, mkView, revalidate, Tuple}
+  import de.sciss.guiflitz.impl.AutoViewImpl.{Tuple, log, mkView, revalidate}
 
   final def tuple: Tuple = (cell, comp)
 

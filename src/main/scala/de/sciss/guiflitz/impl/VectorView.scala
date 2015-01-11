@@ -13,13 +13,17 @@
 package de.sciss.guiflitz
 package impl
 
-import scala.swing.{BorderPanel, Button, ScrollPane, FlowPanel, Component, Orientation, BoxPanel}
+import javax.swing.{JSeparator, JToolBar, SpringLayout}
+
+import de.sciss.guiflitz.AutoView.Config
+
 import scala.collection.immutable.{IndexedSeq => Vec}
-import javax.swing.{JToolBar, SpringLayout, JSeparator}
-import AutoView.Config
+import scala.swing.{BorderPanel, BoxPanel, Button, Component, FlowPanel, Orientation, ScrollPane}
+
+import scala.language.existentials
 
 object VectorView {
-  import AutoViewImpl.{Tuple, revalidate, mkView}
+  import de.sciss.guiflitz.impl.AutoViewImpl.{Tuple, mkView, revalidate}
 
   def apply(init: Vec[Any], childShape: Shape, config: Config): Tuple = {
     type Child      = (Cell[Any], Cell.Listener[Any])

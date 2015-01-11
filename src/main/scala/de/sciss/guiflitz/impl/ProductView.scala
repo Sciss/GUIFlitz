@@ -13,18 +13,19 @@
 package de.sciss.guiflitz
 package impl
 
-import scala.collection.immutable.{IndexedSeq => Vec}
-import AutoView.Config
-import scala.swing.{Insets, TextField, CheckBox, GridBagPanel, Alignment, Label, Swing}
-import scala.reflect.runtime.{universe => ru, currentMirror => cm}
-import ru.Type
-import scala.swing.GridBagPanel.{Anchor, Fill}
+import de.sciss.guiflitz.AutoView.Config
 import de.sciss.swingplus.{ComboBox, Spinner}
 
-// import de.sciss.swingplus.Implicits._
+import scala.collection.immutable.{IndexedSeq => Vec}
+import scala.reflect.runtime.{currentMirror => cm, universe => ru}
+import ru.Type
+import scala.swing.GridBagPanel.{Anchor, Fill}
+import scala.swing.{Alignment, CheckBox, GridBagPanel, Insets, Label, Swing, TextField}
+
+import scala.language.existentials
 
 object ProductView {
-  import AutoViewImpl.{Tuple, mkView}
+  import de.sciss.guiflitz.impl.AutoViewImpl.{Tuple, mkView}
 
   private val insLabel  = new Insets(1, 8, 1, 2)
   private val insView   = new Insets(1, 2, 1, 4)

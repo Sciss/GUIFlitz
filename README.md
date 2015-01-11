@@ -12,7 +12,7 @@ To use the library in your project:
 
     "de.sciss" %% "guiflitz" % v
 
-The current version `v` is `"0.4.0"`
+The current version `v` is `"0.5.0"`
 
 ## example
 
@@ -26,6 +26,8 @@ An example application is provided by means of `sbt test:run`. The source class 
 - singleton objects
 - `immutable.IndexedSeq[A]`, given that type `A` is supported
 - `Option[A]`, given that type `A` is supported
+
+Support for custom types can be added via the `addViewFactory` method of the `AutoView`'s configuration. For details, see the `CustomViewApp` example in the `test` directory.
 
 ## limitations, known issues
 
