@@ -2,7 +2,7 @@
  *  Shape.scala
  *  (GUIFlitz)
  *
- *  Copyright (c) 2013-2014 Hanns Holger Rutz. All rights reserved.
+ *  Copyright (c) 2013-2015 Hanns Holger Rutz. All rights reserved.
  *
  *  This software is published under the GNU Lesser General Public License v2.1+
  *
@@ -48,8 +48,8 @@ object Shape {
     def instantiate(): Any = {
       val clazz           = tpe.typeSymbol.asClass
       val (im, _, mApply) = getApplyMethod(clazz)
-      val vargs = args.map { arg => arg.default.getOrElse(arg.shape.instantiate()) }
-      im.reflectMethod(mApply)(vargs: _*)
+      val vArgs = args.map { arg => arg.default.getOrElse(arg.shape.instantiate()) }
+      im.reflectMethod(mApply)(vArgs: _*)
     }
   }
   // case class Module (tpe: Type)                  extends Shape
@@ -97,7 +97,7 @@ object Shape {
     (im, ts, mApply)
   }
 
-  // cf. stackoverflow nr. 12842729
+  // cf. stack-overflow nr. 12842729
   @inline private def firstTypeParameter(t: Type): Type =t.asInstanceOf[ru.TypeRefApi].args.head
 
   def fromType(tpe: Type): Shape = {
@@ -124,9 +124,9 @@ object Shape {
 
       case _ => // try to resolve as a Product (case class) or singleton
 
-        val tsym  = tpe.typeSymbol
-        // println(s"Type symbol $tsym; isClass? ${tsym.isClass}")
-        val clazz = tsym.asClass
+        val tSym  = tpe.typeSymbol
+        // println(s"Type symbol $tSym; isClass? ${tSym.isClass}")
+        val clazz = tSym.asClass
         if (clazz.isCaseClass && !clazz.isModuleClass) {
           val (im, ts, mApply) = getApplyMethod(clazz)
           val as    = mApply.paramss.flatten
@@ -155,10 +155,10 @@ object Shape {
           Shape.Product(tpe, args)
 
         } else if (clazz.isSealed) {
-          val syms            = clazz.knownDirectSubclasses.toIndexedSeq.sortBy(_.name.toString)
-          clazz.companionSymbol.typeSignature // !!! work around stackoverflow no. 17012294
-          // val sub: Vec[Shape] = syms.map(sym => fromType(sym.asType.toType))
-          val sub: Vec[Type] = syms.map(_.asType.toType)
+          val symbols = clazz.knownDirectSubclasses.toIndexedSeq.sortBy(_.name.toString)
+          clazz.companionSymbol.typeSignature // !!! work around stack-overflow no. 17012294
+          // val sub: Vec[Shape] = symbols.map(sym => fromType(sym.asType.toType))
+          val sub: Vec[Type] = symbols.map(_.asType.toType)
           Shape.Variant(tpe, sub)
 
         } else {

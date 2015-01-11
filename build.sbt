@@ -1,12 +1,12 @@
 name               := "GUIFlitz"
 
-version            := "0.4.0"
+version            := "0.5.0-SNAPSHOT"
 
 organization       := "de.sciss"
 
-scalaVersion       := "2.11.2"
+scalaVersion       := "2.11.5"
 
-crossScalaVersions := Seq("2.11.2", "2.10.4")
+crossScalaVersions := Seq("2.11.5", "2.10.4")
 
 description        := "Automatic GUI from case classes for rapid prototyping"
 
@@ -20,7 +20,6 @@ lazy val swingPlusVersion = "0.2.0"
 
 lazy val modelVersion     = "0.3.2"
 
-
 initialCommands in console := 
   """import de.sciss.swingplus._
     |import scala.swing._
@@ -32,8 +31,6 @@ libraryDependencies ++= Seq(
   "de.sciss" %% "swingplus" % swingPlusVersion,
   "de.sciss" %% "model"     % modelVersion
 )
-
-// retrieveManaged := true
 
 scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-encoding", "utf8", "-Xfuture")
 

@@ -2,7 +2,7 @@
  *  AutoViewImpl.scala
  *  (GUIFlitz)
  *
- *  Copyright (c) 2013-2014 Hanns Holger Rutz. All rights reserved.
+ *  Copyright (c) 2013-2015 Hanns Holger Rutz. All rights reserved.
  *
  *  This software is published under the GNU Lesser General Public License v2.1+
  *
@@ -38,7 +38,7 @@ private[guiflitz] object AutoViewImpl {
     val shape         = Shape[A]
     val (cell, comp)  = mkView(init, shape, config, nested = false)
     comp.peer.putClientProperty(PROP_TOP, true)
-    val cellC         = cell.asInstanceOf[Cell[A]]  // grmpff....
+    val cellC         = cell.asInstanceOf[Cell[A]]  // bad....
     val compS         = if (config.scroll) {
       val scroll    = new ScrollPane(comp)
       scroll.border = Swing.EmptyBorder
@@ -61,6 +61,9 @@ private[guiflitz] object AutoViewImpl {
       apply(comp.peer)
     }
 
+  private def unsupportedShape(shape: Shape): Nothing =
+    throw new IllegalArgumentException(s"Shape $shape has no supported view")
+
   private[impl] def mkView(init: Any, shape: Shape, config: Config, nested: Boolean): Tuple = {
     val res: Tuple = (init, shape) match {
       case (i: Int      , Shape.Int               )  => mkIntSpinner   (i)
@@ -72,8 +75,11 @@ private[guiflitz] object AutoViewImpl {
       case (_           , v @ Shape.Variant(_, _ ))  => mkVariant      (init, v, config)
       case (v: Vec[_]   , Shape.Vector(_, cs)     )  => mkVector       (v, cs, config)
       case (o: Option[_], Shape.Option(_, cs)     )  => mkOption       (o, cs, config)
-      // case (_,          Shape.Other(tpe)        )  => mkLabel(tpe)
-      case _ => throw new IllegalArgumentException(s"Shape $shape has no supported view")
+      case (v           , Shape.Other(tpe)        )  =>
+        config.factoryMap.get(shape.tpe).fold(unsupportedShape(shape)) { f =>
+          f.asInstanceOf[ViewFactory[Any]].makeView(init)
+        }
+      case _ => unsupportedShape(shape)
     }
     mkSmall(res._2, config)
     res

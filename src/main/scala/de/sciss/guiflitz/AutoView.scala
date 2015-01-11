@@ -2,7 +2,7 @@
  *  AutoView.scala
  *  (GUIFlitz)
  *
- *  Copyright (c) 2013-2014 Hanns Holger Rutz. All rights reserved.
+ *  Copyright (c) 2013-2015 Hanns Holger Rutz. All rights reserved.
  *
  *  This software is published under the GNU Lesser General Public License v2.1+
  *
@@ -12,11 +12,12 @@
 
 package de.sciss.guiflitz
 
-import impl.{AutoViewImpl => Impl}
-import scala.swing.{Component, Panel}
-import reflect.runtime.{universe => ru}
-import ru.TypeTag
-import language.implicitConversions
+import de.sciss.guiflitz.impl.{AutoViewImpl => Impl}
+
+import scala.language.implicitConversions
+import scala.reflect.runtime.{universe => ru}
+import ru.{Type, TypeTag}
+import scala.swing.Component
 
 object AutoView {
   /** This field is for debugging purposes only. */
@@ -27,21 +28,35 @@ object AutoView {
     def small: Boolean
     /** Whether to wrap the component in a scroll pane (`true`) or not. Default is `true`. */
     def scroll: Boolean
+
+    private[guiflitz] def factoryMap: Map[Type, ViewFactory[_]]
+
+    def getViewFactory[A](implicit typeTag: TypeTag[A]): Option[ViewFactory[A]] =
+      factoryMap.get(typeTag.tpe).asInstanceOf[Option[ViewFactory[A]]]
   }
   object Config {
     def apply(): ConfigBuilder = new ConfigBuilder
     implicit def build(b: ConfigBuilder): Config = b.build
   }
-  case class Config private[AutoView](small: Boolean, scroll: Boolean) extends ConfigLike
+  case class Config private[AutoView](small: Boolean, scroll: Boolean,
+                                      private[guiflitz] val factoryMap: Map[Type, ViewFactory[_]])
+    extends ConfigLike {
+  }
   final class ConfigBuilder private[AutoView]() extends ConfigLike {
     var small   = false
     var scroll  = true
 
-    def build: Config = Config(small = small, scroll = scroll)
+    private[guiflitz] var factoryMap = Map.empty[Type, ViewFactory[_]]
+
+    def putViewFactory[A](factory: ViewFactory[A])(implicit typeTag: TypeTag[A]): Unit =
+      factoryMap += typeTag.tpe -> factory
+
+    def build: Config = Config(small = small, scroll = scroll, factoryMap = factoryMap)
 
     def read(c: Config): Unit = {
-      small   = c.small
-      scroll  = c.scroll
+      small       = c.small
+      scroll      = c.scroll
+      factoryMap  = c.factoryMap
     }
   }
 
