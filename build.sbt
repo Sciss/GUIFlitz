@@ -1,24 +1,16 @@
 name               := "GUIFlitz"
-
-version            := "0.5.0"
-
+version            := "0.5.1"
 organization       := "de.sciss"
-
-scalaVersion       := "2.11.5"
-
-crossScalaVersions := Seq("2.11.5", "2.10.4")
-
+scalaVersion       := "2.12.2"
+crossScalaVersions := Seq("2.12.2", "2.11.11", "2.10.6")
 description        := "Automatic GUI from case classes for rapid prototyping"
-
 homepage           := Some(url("https://github.com/Sciss/" + name.value))
-
 licenses           := Seq("LGPL v2.1+" -> url("http://www.gnu.org/licenses/lgpl-2.1.txt"))
 
 // ---- dependencies ----
 
-lazy val swingPlusVersion = "0.2.0"
-
-lazy val modelVersion     = "0.3.2"
+lazy val swingPlusVersion = "0.2.2"
+lazy val modelVersion     = "0.3.3"
 
 initialCommands in console := 
   """import de.sciss.swingplus._
@@ -62,14 +54,3 @@ pomExtra := { val n = name.value
   </developer>
 </developers>
 }
-
-// ---- ls.implicit.ly ----
-
-seq(lsSettings :_*)
-
-(LsKeys.tags   in LsKeys.lsync) := Seq("swing", "gui")
-
-(LsKeys.ghUser in LsKeys.lsync) := Some("Sciss")
-
-(LsKeys.ghRepo in LsKeys.lsync) := Some(name.value)
-
