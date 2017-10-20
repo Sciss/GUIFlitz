@@ -1,6 +1,5 @@
 # GUIFlitz
 
-[![Flattr this](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=sciss&url=https%3A%2F%2Fgithub.com%2FSciss%2FGUIFlitz&title=GUIFlitz&language=Scala&tags=github&category=software)
 [![Build Status](https://travis-ci.org/Sciss/GUIFlitz.svg?branch=master)](https://travis-ci.org/Sciss/GUIFlitz)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/de.sciss/guiflitz_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/de.sciss/guiflitz_2.11)
 
