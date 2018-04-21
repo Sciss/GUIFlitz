@@ -1,16 +1,16 @@
 name               := "GUIFlitz"
-version            := "0.5.1"
+version            := "0.6.0"
 organization       := "de.sciss"
-scalaVersion       := "2.12.2"
-crossScalaVersions := Seq("2.12.2", "2.11.11", "2.10.6")
+scalaVersion       := "2.12.5"
+crossScalaVersions := Seq("2.12.5", "2.11.12")
 description        := "Automatic GUI from case classes for rapid prototyping"
 homepage           := Some(url("https://github.com/Sciss/" + name.value))
 licenses           := Seq("LGPL v2.1+" -> url("http://www.gnu.org/licenses/lgpl-2.1.txt"))
 
 // ---- dependencies ----
 
-lazy val swingPlusVersion = "0.2.2"
-lazy val modelVersion     = "0.3.3"
+lazy val swingPlusVersion = "0.3.0"
+lazy val modelVersion     = "0.3.4"
 
 initialCommands in console := 
   """import de.sciss.swingplus._
